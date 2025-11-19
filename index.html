@@ -1040,9 +1040,17 @@
     // --- Global state ---
     let products = [];            // from products.json
     let cart = [];                // cart items: {productId, name, price, quantity}
-    let orders = [];              // rows from backend (one per line item)
+    let orders = [];              // rows from backend or local (one per line item)
     let nextBackendId = 1;
     let hideCompleted = false;
+
+    const hasBackend =
+      typeof window !== "undefined" &&
+      typeof window.dataSdk !== "undefined" &&
+      typeof window.dataSdk.init === "function" &&
+      typeof window.dataSdk.create === "function";
+
+    const STORAGE_KEY_ORDERS = "mamaranta_orders_v1";
 
     let isAdmin = false;
     const ADMIN_PASSWORD = "mamaranta2024"; // change if you want
@@ -1062,11 +1070,6 @@
 
     let isSubmitting = false;
 
-    const hasBackend =
-      typeof window.dataSdk !== "undefined" &&
-      typeof window.dataSdk.init === "function" &&
-      typeof window.dataSdk.create === "function";
-
     // Sample static reviews
     const sampleReviews = [
       {
@@ -1085,6 +1088,45 @@
         meta: "Neighbourhood guest"
       }
     ];
+
+    // --- Local storage helpers for orders (for when no backend) ---
+    function saveOrdersToLocal() {
+      if (hasBackend) return; // backend already persists data
+      if (typeof localStorage === "undefined") return;
+
+      try {
+        localStorage.setItem(STORAGE_KEY_ORDERS, JSON.stringify(orders));
+      } catch (e) {
+        console.error("Failed to save orders to localStorage", e);
+      }
+    }
+
+    function loadOrdersFromLocal() {
+      if (hasBackend) return;
+      if (typeof localStorage === "undefined") return;
+
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY_ORDERS);
+        if (!raw) return;
+
+        const parsed = JSON.parse(raw);
+        if (!Array.isArray(parsed)) return;
+
+        orders = parsed;
+        // Ensure nextBackendId keeps increasing
+        nextBackendId =
+          orders.reduce(
+            (max, o) => Math.max(max, Number(o.__backendId || 0)),
+            0
+          ) + 1;
+
+        renderOrdersTable();
+        renderStats();
+        renderNeededToBake();
+      } catch (e) {
+        console.error("Failed to load orders from localStorage", e);
+      }
+    }
 
     // --- Load products from JSON file ---
     async function loadProducts() {
@@ -1146,7 +1188,7 @@
       `).join('');
     }
 
-    // --- Render reviews (sample + any future dynamic if you add) ---
+    // --- Render reviews ---
     function renderReviews() {
       const strip = document.getElementById('reviews-strip');
       if (!strip) return;
@@ -1304,6 +1346,7 @@
         ...orderData
       };
       orders.push(orderRow);
+      saveOrdersToLocal();
     }
 
     // --- Handle full cart checkout ---
@@ -1454,6 +1497,7 @@
       renderOrdersTable();
       renderStats();
       renderNeededToBake();
+      saveOrdersToLocal();
     }
 
     // --- Group orders by order_id (one logical order = many line items) ---
@@ -1507,6 +1551,7 @@
       renderOrdersTable();
       renderStats();
       renderNeededToBake();
+      saveOrdersToLocal();
     }
 
     function togglePaymentStatus(orderId) {
@@ -1519,6 +1564,7 @@
       renderOrdersTable();
       renderStats();
       renderNeededToBake();
+      saveOrdersToLocal();
     }
 
     // --- Analytics cards ---
@@ -1703,7 +1749,24 @@
 
       tbody.innerHTML = '';
 
-      const allGroups = getOrderGroups();
+      let allGroups = getOrderGroups();
+
+      // Sort by earliest delivery_date, then by earliest order_date
+      allGroups.sort((a, b) => {
+        const maxDate = new Date(8640000000000000);
+        const aDel = a.delivery_date ? new Date(a.delivery_date) : maxDate;
+        const bDel = b.delivery_date ? new Date(b.delivery_date) : maxDate;
+
+        if (aDel.getTime() !== bDel.getTime()) {
+          return aDel - bDel;
+        }
+
+        const aOrd = a.order_date ? new Date(a.order_date) : maxDate;
+        const bOrd = b.order_date ? new Date(b.order_date) : maxDate;
+
+        return aOrd - bOrd;
+      });
+
       const visibleGroups = hideCompleted
         ? allGroups.filter(g => g.status !== "completed")
         : allGroups;
@@ -1906,6 +1969,7 @@
         renderOrdersTable();
         renderStats();
         renderNeededToBake();
+        saveOrdersToLocal();
       }
     };
 
@@ -1922,6 +1986,9 @@
         if (!dataResult || !dataResult.isOk) {
           console.error("Failed to initialize data SDK");
         }
+      } else {
+        // No backend: restore from local storage
+        loadOrdersFromLocal();
       }
 
       if (window.elementSdk) {
