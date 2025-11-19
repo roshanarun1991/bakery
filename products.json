@@ -1,0 +1,52 @@
+{
+  "products": [
+    {
+      "id": "kanelbulle",
+      "name": "Kanelbullar",
+      "price": 35,
+      "description": "Classic Swedish cinnamon rolls with pearl sugar",
+      "image": "images/kanelbulle.jpg",
+      "stock": 50
+    },
+    {
+      "id": "princess-cake",
+      "name": "Prinsesstårta",
+      "price": 285,
+      "description": "Traditional Swedish layer cake with marzipan",
+      "image": "images/princess-cake.jpg",
+      "stock": 10
+    },
+    {
+      "id": "semla",
+      "name": "Semla",
+      "price": 45,
+      "description": "Sweet cream-filled cardamom bun",
+      "image": "images/semla.jpg",
+      "stock": 30
+    },
+    {
+      "id": "kladdkaka",
+      "name": "Kladdkaka",
+      "price": 65,
+      "description": "Swedish sticky chocolate cake",
+      "image": "images/kladdkaka.jpg",
+      "stock": 20
+    },
+    {
+      "id": "rye-bread",
+      "name": "Rågbröd",
+      "price": 55,
+      "description": "Hearty Swedish rye bread",
+      "image": "images/rye-bread.jpg",
+      "stock": 25
+    },
+    {
+      "id": "vanilla-hearts",
+      "name": "Vaniljhjärtan",
+      "price": 40,
+      "description": "Vanilla-flavoured heart-shaped cookies",
+      "image": "images/vanilla-hearts.jpg",
+      "stock": 40
+    }
+  ]
+}
