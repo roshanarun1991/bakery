@@ -955,10 +955,10 @@
           <thead>
             <tr>
               <th>Order ID</th>
-              <th>Customer ID</th>
               <th>Customer</th>
               <th>Email</th>
               <th>Phone</th>
+              <th>Address</th>
               <th>Items</th>
               <th>Total amount (SEK)</th>
               <th>payment_status</th>
@@ -1003,6 +1003,10 @@
         <input type="tel" id="customerPhone" required>
       </div>
       <div class="form-group">
+        <label for="customerAddress">Delivery Address *</label>
+        <input type="text" id="customerAddress" required>
+      </div>
+      <div class="form-group">
         <label for="deliveryDate">Delivery Date *</label>
         <input type="date" id="deliveryDate" required>
       </div>
@@ -1016,7 +1020,8 @@
       <div class="payment-demo-notice">
         <strong>⚠️ DEMO PAYMENT SECTION</strong><br>
         This is a demonstration. No actual payment processing occurs.<br>
-        The amount due is shown in the admin panel under <strong>payment_amount</strong>.
+        Items are shown in the admin panel under <strong>payment_amount</strong>.<br>
+        <strong>Delivery is FREE for orders over 500 SEK, otherwise 99 SEK is added.</strong>
       </div>
 
       <div id="successMessage" class="success-message" style="display: none;">
@@ -1146,7 +1151,7 @@
       const strip = document.getElementById('reviews-strip');
       if (!strip) return;
 
-      const all = sampleReviews; // later you can append real approved ones
+      const all = sampleReviews;
       if (!all.length) {
         strip.innerHTML = "<p style='color:#666;'>No reviews yet.</p>";
         return;
@@ -1238,8 +1243,20 @@
         `).join('');
       }
 
-      const total = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
-      if (totalEl) totalEl.textContent = `Cart Total: ${total} SEK`;
+      const subtotal = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
+      let deliveryFee = 0;
+      if (subtotal > 0 && subtotal < 500) {
+        deliveryFee = 99;
+      }
+      const grandTotal = subtotal + deliveryFee;
+
+      if (totalEl) {
+        totalEl.innerHTML = `
+          <div>Items total: ${subtotal} SEK</div>
+          <div>${subtotal >= 500 ? "Delivery: FREE (orders over 500 SEK)" : "Delivery: 99 SEK (free over 500 SEK)"}</div>
+          <div style="margin-top:0.25rem;font-weight:700;">Total to pay: ${grandTotal} SEK</div>
+        `;
+      }
     }
 
     function openCartModal() {
@@ -1307,23 +1324,19 @@
       submitBtn.innerHTML = 'Processing<span class="loading-spinner"></span>';
 
       try {
-        // Order ID and 4-digit customer ID for this checkout
-        const orderId =
-          "ORD-" +
-          Date.now().toString(36) +
-          "-" +
-          Math.random().toString(36).slice(2, 6);
-
-        const customerId = String(
-          Math.floor(1000 + Math.random() * 9000)
-        );
+        // Simple 4-digit order id: ORD-1234
+        const orderId = "ORD-" + String(Math.floor(1000 + Math.random() * 9000));
 
         const customerName = document.getElementById('customerName').value;
         const customerEmail = document.getElementById('customerEmail').value;
         const customerPhone = document.getElementById('customerPhone').value;
+        const customerAddress = document.getElementById('customerAddress').value;
         const deliveryDate = document.getElementById('deliveryDate').value;
         const reviewOptIn = document.getElementById('reviewOptIn').checked;
         const orderDate = new Date().toISOString();
+
+        const subtotal = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
+        const deliveryFee = subtotal > 0 && subtotal < 500 ? 99 : 0;
 
         // Check stock again before finalising
         for (const item of cart) {
@@ -1337,17 +1350,18 @@
           }
         }
 
-        const rowsToCreate = cart.map(item => ({
+        const rowsToCreate = cart.map((item, index) => ({
           order_id: orderId,
-          customer_id: customerId,
           customer_name: customerName,
           customer_email: customerEmail,
           customer_phone: customerPhone,
+          customer_address: customerAddress,
           product_id: item.productId,
           product_name: item.name,
           quantity: item.quantity,
           total_price: item.price * item.quantity,
           payment_amount: item.price * item.quantity,
+          shipping_fee: index === 0 ? deliveryFee : 0,
           payment_status: "unpaid",
           delivery_date: deliveryDate,
           order_date: orderDate,
@@ -1452,10 +1466,10 @@
         if (!groupsMap.has(id)) {
           groupsMap.set(id, {
             order_id: id,
-            customer_id: row.customer_id || "",
             customer_name: row.customer_name,
             customer_email: row.customer_email,
             customer_phone: row.customer_phone,
+            customer_address: row.customer_address || "",
             items: [],
             total_amount: 0,
             payment_status: row.payment_status || "unpaid",
@@ -1469,6 +1483,7 @@
         const group = groupsMap.get(id);
         group.items.push(`${row.product_name || row.product_id} x${row.quantity || 0}`);
         group.total_amount += Number(row.payment_amount || row.total_price || 0);
+        group.total_amount += Number(row.shipping_fee || 0);
 
         if (row.payment_status === "unpaid") {
           group.payment_status = "unpaid";
@@ -1523,7 +1538,10 @@
       );
 
       const totalRevenue = orders.reduce(
-        (sum, o) => sum + Number(o.payment_amount || o.total_price || 0),
+        (sum, o) =>
+          sum +
+          Number(o.payment_amount || o.total_price || 0) +
+          Number(o.shipping_fee || 0),
         0
       );
 
@@ -1579,7 +1597,7 @@
         <div class="stat-card">
           <div class="stat-label">Revenue (SEK)</div>
           <div class="stat-value">${totalRevenue}</div>
-          <div class="stat-sub">Based on payment_amount</div>
+          <div class="stat-sub">Items + delivery fees</div>
         </div>
         <div class="stat-card">
           <div class="stat-label">Best seller</div>
@@ -1698,10 +1716,10 @@
 
         const cells = [
           group.order_id,
-          group.customer_id || "",
           group.customer_name,
           group.customer_email,
           group.customer_phone,
+          group.customer_address,
           group.items.join(', '),
           group.total_amount,
           group.payment_status,
@@ -1771,15 +1789,16 @@
       const headers = [
         "__backendId",
         "order_id",
-        "customer_id",
         "customer_name",
         "customer_email",
         "customer_phone",
+        "customer_address",
         "product_id",
         "product_name",
         "quantity",
         "total_price",
         "payment_amount",
+        "shipping_fee",
         "payment_status",
         "delivery_date",
         "order_date",
@@ -1790,15 +1809,16 @@
       const rows = orders.map(order => [
         order.__backendId,
         order.order_id || "",
-        order.customer_id || "",
         order.customer_name,
         order.customer_email,
         order.customer_phone,
+        order.customer_address || "",
         order.product_id,
         order.product_name,
         order.quantity,
         order.total_price,
         order.payment_amount,
+        order.shipping_fee || 0,
         order.payment_status,
         order.delivery_date,
         order.order_date,
@@ -1864,15 +1884,16 @@
           return {
             __backendId: backendId,
             order_id: row.order_id || `ORD-LEGACY-${backendId}`,
-            customer_id: row.customer_id || "",
             customer_name: row.customer_name || "",
             customer_email: row.customer_email || "",
             customer_phone: row.customer_phone || "",
+            customer_address: row.customer_address || "",
             product_id: row.product_id || "",
             product_name: row.product_name || "",
             quantity: Number(row.quantity || 0),
             total_price: Number(row.total_price || 0),
             payment_amount: Number(row.payment_amount || row.total_price || 0),
+            shipping_fee: Number(row.shipping_fee || 0),
             payment_status: row.payment_status || "unpaid",
             delivery_date: row.delivery_date || "",
             order_date: row.order_date || "",
