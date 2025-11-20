@@ -1,7 +1,4 @@
-// Swish phone number
-const SWISH_PHONE_DISPLAY = "+46 728 359978";
-// cleaned version (no + or spaces) for deep link
-const SWISH_PHONE = "46728359978";
+console.log("window.dataSdk at start:", window.dataSdk);
 
 // --- Global state ---
 let products = [];            // from products.json
@@ -13,10 +10,17 @@ let hideCompleted = false;
 let isAdmin = false;
 const ADMIN_PASSWORD = "mamaranta2024"; // change if you want
 
+// Swish phone number (local format, no +46 here)
+const SWISH_PHONE = "0728359978";
+
+// Keep latest order info for Swish deeplink
+let lastOrderAmount = 0;
+let lastOrderId = "";
+
 const defaultConfig = {
   bakery_name: "Mama Ranta Bakery",
   tagline: "Authentic Swedish Baked Goods",
-  contact_phone: SWISH_PHONE_DISPLAY,
+  contact_phone: "+46 8 123 4567",
   contact_email: "hello@mamaranta.se",
   contact_address: "Storgatan 12, Stockholm",
   background_color: "#f9f6f2",
@@ -85,9 +89,11 @@ async function loadProducts() {
   }
 }
 
-// --- Render products grid with image + quantity + add-to-cart + stock ---
+// --- Render products ---
 function renderProducts() {
   const grid = document.getElementById("products-grid");
+  if (!grid) return;
+
   grid.innerHTML = products.map(product => `
     <div class="product-card">
       <div class="product-image">
@@ -168,7 +174,6 @@ function addToCart(productId) {
     quantity = parseInt(qtySelect.value, 10) || 1;
   }
 
-  // Do not allow adding more than stock
   const existing = cart.find(item => item.productId === productId);
   const alreadyInCart = existing ? existing.quantity : 0;
   if (alreadyInCart + quantity > product.stock) {
@@ -210,6 +215,9 @@ function renderCartModal() {
     if (shippingEl) shippingEl.textContent = "";
     if (grandTotalEl) grandTotalEl.textContent = "";
     if (emptyMsg) emptyMsg.style.display = "block";
+    // hide Swish box when no items
+    const swishBox = document.getElementById("swish-box");
+    if (swishBox) swishBox.style.display = "none";
     return;
   }
 
@@ -246,10 +254,8 @@ function renderCartModal() {
 function openCartModal() {
   const modal = document.getElementById("cartModal");
   renderCartModal();
-  const successMessage = document.getElementById("successMessage");
-  const paymentInfo = document.getElementById("payment-info");
-  if (successMessage) successMessage.style.display = "none";
-  if (paymentInfo) paymentInfo.style.display = "none";
+  const success = document.getElementById("successMessage");
+  if (success) success.style.display = "none";
   modal.classList.add("active");
   document.body.style.overflow = "hidden";
 }
@@ -258,11 +264,14 @@ function closeCartModal() {
   const modal = document.getElementById("cartModal");
   modal.classList.remove("active");
   document.body.style.overflow = "";
-  document.getElementById("orderForm").reset();
-  const successMessage = document.getElementById("successMessage");
-  const paymentInfo = document.getElementById("payment-info");
-  if (successMessage) successMessage.style.display = "none";
-  if (paymentInfo) paymentInfo.style.display = "none";
+  const form = document.getElementById("orderForm");
+  if (form) form.reset();
+  const success = document.getElementById("successMessage");
+  if (success) success.style.display = "none";
+
+  const swishBox = document.getElementById("swish-box");
+  if (swishBox) swishBox.style.display = "none";
+
   isSubmitting = false;
 }
 
@@ -338,10 +347,62 @@ function renderNeededTable() {
   }
 }
 
+// --- Swish helpers ---
+function updateSwishBox(amount, orderId) {
+  lastOrderAmount = amount;
+  lastOrderId = orderId;
+
+  const swishBox = document.getElementById("swish-box");
+  const phoneEl = document.getElementById("swish-phone");
+  const amountEl = document.getElementById("swish-amount");
+  const orderEl = document.getElementById("swish-order-id");
+
+  if (!swishBox || !phoneEl || !amountEl || !orderEl) return;
+
+  phoneEl.textContent = "0728 359 978";
+  amountEl.textContent = `${amount} kr`;
+  orderEl.textContent = orderId;
+
+  swishBox.style.display = "block";
+}
+
+async function copySwishDetails() {
+  const text = `Swish to: 0728 359 978\nAmount: ${lastOrderAmount} kr\nMessage: ${lastOrderId}`;
+  try {
+    await navigator.clipboard.writeText(text);
+    alert("Swish details copied. Open Swish and paste if needed.");
+  } catch (e) {
+    console.error("Clipboard error:", e);
+    alert("Could not copy automatically. Please note the number, amount and order ID.");
+  }
+}
+
+function openSwishApp() {
+  if (!lastOrderAmount || !lastOrderId) {
+    alert("Please place an order first.");
+    return;
+  }
+
+  // Deeplink payload (may still be rejected by Swish if the number is not a merchant setup)
+  const payload = {
+    version: 1,
+    payee: { value: SWISH_PHONE },
+    amount: { value: lastOrderAmount.toString(), currency: "SEK" },
+    message: { value: lastOrderId }
+  };
+
+  const json = JSON.stringify(payload);
+  const encoded = encodeURIComponent(json);
+  const url = `swish://payment?data=${encoded}`;
+
+  // Try to open Swish. If it fails, the user still has all details visible + copy.
+  window.location.href = url;
+}
+
 // --- Handle full cart checkout ---
 async function handleOrderSubmit(event) {
   event.preventDefault();
-
+  
   if (isSubmitting) return;
   if (!cart.length) {
     alert("Your cart is empty.");
@@ -367,7 +428,7 @@ async function handleOrderSubmit(event) {
 
     const { itemTotal, shipping, grandTotal } = calculateCartTotals();
 
-    // Check stock again before finalising
+    // Stock check
     for (const item of cart) {
       const product = products.find(p => p.id === item.productId);
       if (!product || product.stock < item.quantity) {
@@ -389,7 +450,7 @@ async function handleOrderSubmit(event) {
       product_name: item.name,
       quantity: item.quantity,
       total_price: item.price * item.quantity,
-      payment_amount: grandTotal, // store grand total per line
+      payment_amount: grandTotal, // same total on each line
       shipping_fee: shipping,
       payment_status: "unpaid",
       delivery_date: deliveryDate,
@@ -415,7 +476,7 @@ async function handleOrderSubmit(event) {
       updateBackendStatus(false);
     }
 
-    // Deduct stock based on cart and re-render both products and inventory panel
+    // Deduct stock
     cart.forEach(item => {
       const product = products.find(p => p.id === item.productId);
       if (product) {
@@ -430,38 +491,15 @@ async function handleOrderSubmit(event) {
     renderStats();
     renderNeededTable();
 
-    // Show Swish payment info
-    const paymentInfo = document.getElementById("payment-info");
-    const amountSpan = document.getElementById("swish-amount");
-    const orderIdSpan = document.getElementById("swish-order-id");
-    const swishLink = document.getElementById("swish-link");
+    // Update Swish panel with new order
+    updateSwishBox(grandTotal, orderId);
 
-    if (paymentInfo && amountSpan && orderIdSpan && swishLink) {
-      amountSpan.textContent = `${grandTotal} kr`;
-      orderIdSpan.textContent = orderId;
+    const success = document.getElementById("successMessage");
+    if (success) success.style.display = "block";
 
-      // Swish official deeplink payload
-const payload = {
-  version: 1,
-  payee: { value: "0728359978" },  // local format, NOT +46
-  amount: { value: grandTotal.toString(), currency: "SEK" },
-  message: { value: orderId }       // e.g. "ORD-8579"
-};
+    const form = document.getElementById("orderForm");
+    if (form) form.reset();
 
-// Encode for URL
-const json = JSON.stringify(payload);
-const encoded = encodeURIComponent(json);
-
-// Build Swish link
-const swishUrl = `swish://payment?data=${encoded}`;
-swishLink.href = swishUrl;
-
-      paymentInfo.style.display = "flex";
-      const successMessage = document.getElementById("successMessage");
-      if (successMessage) successMessage.style.display = "block";
-    }
-
-    document.getElementById("orderForm").reset();
     cart = [];
     updateCartCount();
     renderCartModal();
@@ -614,7 +652,7 @@ function renderStats() {
   `;
 }
 
-// --- Inventory panel (ADMIN: edit stock) ---
+// --- Inventory panel ---
 function renderInventoryPanel() {
   const panel = document.getElementById("inventory-panel");
   if (!panel) return;
@@ -804,7 +842,7 @@ async function onConfigChange(config) {
   document.getElementById("contact-address").textContent = config.contact_address || defaultConfig.contact_address;
 
   document.body.style.background = config.background_color || defaultConfig.background_color;
-
+  
   const surfaces = document.querySelectorAll(".header, .product-card, .contact, .modal-content, .review-card");
   surfaces.forEach(el => el.style.background = config.surface_color || defaultConfig.surface_color);
 
@@ -869,6 +907,16 @@ async function init() {
   renderStats();
   renderNeededTable();
   updateBackendStatus(false);
+
+  // Swish button handlers
+  const swishCopyBtn = document.getElementById("swish-copy-all");
+  if (swishCopyBtn) {
+    swishCopyBtn.addEventListener("click", copySwishDetails);
+  }
+  const swishOpenBtn = document.getElementById("swish-open-app");
+  if (swishOpenBtn) {
+    swishOpenBtn.addEventListener("click", openSwishApp);
+  }
 
   if (hasBackend) {
     try {
@@ -945,4 +993,3 @@ async function init() {
 }
 
 init();
-
