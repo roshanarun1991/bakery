@@ -440,9 +440,21 @@ async function handleOrderSubmit(event) {
       amountSpan.textContent = `${grandTotal} kr`;
       orderIdSpan.textContent = orderId;
 
-      const msg = encodeURIComponent(`Mama Ranta order ${orderId}`);
-      const href = `swish://payment?phone=${encodeURIComponent(SWISH_PHONE)}&amount=${grandTotal}&message=${msg}`;
-      swishLink.href = href;
+      // Swish official deeplink payload
+const payload = {
+  version: 1,
+  payee: { value: "0728359978" },  // local format, NOT +46
+  amount: { value: grandTotal.toString(), currency: "SEK" },
+  message: { value: orderId }       // e.g. "ORD-8579"
+};
+
+// Encode for URL
+const json = JSON.stringify(payload);
+const encoded = encodeURIComponent(json);
+
+// Build Swish link
+const swishUrl = `swish://payment?data=${encoded}`;
+swishLink.href = swishUrl;
 
       paymentInfo.style.display = "flex";
       const successMessage = document.getElementById("successMessage");
@@ -933,3 +945,4 @@ async function init() {
 }
 
 init();
+
