@@ -5,8 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Mama Ranta Bakery</title>
   <!-- Optional SDKs (safe even if not present) -->
-  <script src="./_sdk/data_sdk.js"></script>
-  <script src="/_sdk/element_sdk.js"></script>
+  <script src="_sdk/data_sdk.js"></script>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700&family=Inter:wght@300;400;500;600&display=swap');
 
@@ -921,14 +920,14 @@
     <div style="max-width: 1200px; margin: 0 auto;">
 
       <div class="admin-header-row">
-        <div style="display:flex; flex-direction:column; gap:0.3rem;">
+        <div>
           <label style="font-size:0.85rem;">
             <input type="checkbox" id="hideCompletedCheckbox" onchange="toggleHideCompleted(this.checked)">
             Hide completed orders
           </label>
-          <span id="backend-status" style="font-size:0.8rem; color:#666;">
-            Checking backend status…
-          </span>
+          <div id="backend-status" style="font-size:0.8rem;margin-top:0.25rem;color:#a15b00;">
+            Backend: checking...
+          </div>
         </div>
         <div>
           <button class="add-cart-btn" type="button" onclick="downloadOrdersCsv()">
@@ -950,20 +949,31 @@
       <h3 style="font-family:'Playfair Display'; color:#8b4513; margin-bottom:0.5rem;">
         Needed to fulfil orders
       </h3>
-      <div id="needed-panel" style="padding:1rem; background:#fff7e8; border-radius:12px; margin-bottom:2rem;"></div>
+      <div class="table-wrapper" style="margin-bottom:2rem;">
+        <table id="neededTable">
+          <thead>
+            <tr>
+              <th>Item</th>
+              <th>Qty to bake</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
 
       <!-- Orders table -->
       <div class="table-wrapper">
         <table id="ordersTable">
           <thead>
             <tr>
-              <th>Order ID</th>
-              <th>Customer</th>
-              <th>Email</th>
-              <th>Phone</th>
-              <th>Address</th>
-              <th>Items</th>
-              <th>Total amount (SEK)</th>
+              <th>order_id</th>
+              <th>customer_name</th>
+              <th>customer_email</th>
+              <th>customer_phone</th>
+              <th>customer_address</th>
+              <th>product_name</th>
+              <th>quantity</th>
+              <th>payment_amount</th>
               <th>payment_status</th>
               <th>delivery_date</th>
               <th>order_date</th>
@@ -991,6 +1001,12 @@
 
     <div id="cart-items-container" class="cart-items-list"></div>
     <div id="cart-total" class="cart-summary-total"></div>
+    <div id="cart-shipping" class="cart-summary-total" style="font-size:0.9rem; color:#555;"></div>
+    <div id="cart-grand-total" class="cart-summary-total" style="margin-top:0.2rem;"></div>
+
+    <p style="font-size:0.85rem; color:#666; margin-top:0.5rem;">
+      Free delivery for orders above 500 kr. Orders below 500 kr have a 99 kr delivery fee.
+    </p>
 
     <form id="orderForm" onsubmit="handleOrderSubmit(event)">
       <div class="form-group">
@@ -1023,8 +1039,7 @@
       <div class="payment-demo-notice">
         <strong>⚠️ DEMO PAYMENT SECTION</strong><br>
         This is a demonstration. No actual payment processing occurs.<br>
-        Items are shown in the admin panel under <strong>payment_amount</strong>.<br>
-        <strong>Delivery is FREE for orders over 500 SEK, otherwise 99 SEK is added.</strong>
+        The amount due is shown in the admin panel under <strong>payment_amount</strong>.
       </div>
 
       <div id="successMessage" class="success-message" style="display: none;">
@@ -1040,20 +1055,14 @@
   </footer>
 
   <script>
+    console.log("window.dataSdk at start:", window.dataSdk);
+
     // --- Global state ---
     let products = [];            // from products.json
     let cart = [];                // cart items: {productId, name, price, quantity}
-    let orders = [];              // rows from backend or local (one per line item)
+    let orders = [];              // admin/backend table rows (one per item)
     let nextBackendId = 1;
     let hideCompleted = false;
-
-    const hasBackend =
-      typeof window !== "undefined" &&
-      typeof window.dataSdk !== "undefined" &&
-      typeof window.dataSdk.init === "function" &&
-      typeof window.dataSdk.create === "function";
-
-    const STORAGE_KEY_ORDERS = "mamaranta_orders_v1";
 
     let isAdmin = false;
     const ADMIN_PASSWORD = "mamaranta2024"; // change if you want
@@ -1072,6 +1081,11 @@
     };
 
     let isSubmitting = false;
+
+    const hasBackend =
+      typeof window.dataSdk !== "undefined" &&
+      typeof window.dataSdk.init === "function" &&
+      typeof window.dataSdk.create === "function";
 
     // Sample static reviews
     const sampleReviews = [
@@ -1092,51 +1106,19 @@
       }
     ];
 
-    // --- Local storage helpers for orders (for when no backend) ---
-    function saveOrdersToLocal() {
-      if (hasBackend) return; // backend already persists data
-      if (typeof localStorage === "undefined") return;
-
-      try {
-        localStorage.setItem(STORAGE_KEY_ORDERS, JSON.stringify(orders));
-      } catch (e) {
-        console.error("Failed to save orders to localStorage", e);
-      }
-    }
-
-    function loadOrdersFromLocal() {
-      if (hasBackend) return;
-      if (typeof localStorage === "undefined") return;
-
-      try {
-        const raw = localStorage.getItem(STORAGE_KEY_ORDERS);
-        if (!raw) return;
-
-        const parsed = JSON.parse(raw);
-        if (!Array.isArray(parsed)) return;
-
-        orders = parsed;
-        // Ensure nextBackendId keeps increasing
-        nextBackendId =
-          orders.reduce(
-            (max, o) => Math.max(max, Number(o.__backendId || 0)),
-            0
-          ) + 1;
-
-        renderOrdersTable();
-        renderStats();
-        renderNeededToBake();
-      } catch (e) {
-        console.error("Failed to load orders from localStorage", e);
-      }
-    }
-
-    // Small helper to show backend status in admin header
-    function setBackendStatus(text, isOk) {
+    function updateBackendStatus(ok) {
       const el = document.getElementById("backend-status");
       if (!el) return;
-      el.textContent = text;
-      el.style.color = isOk ? "#2f855a" : "#b7791f"; // green-ish or amber
+      if (!hasBackend) {
+        el.textContent = "Backend: not configured – using local storage only";
+        el.style.color = "#a15b00";
+      } else if (!ok) {
+        el.textContent = "Backend: error – using local storage only";
+        el.style.color = "#a15b00";
+      } else {
+        el.textContent = "Backend: connected to Supabase";
+        el.style.color = "#0b7a2a";
+      }
     }
 
     // --- Load products from JSON file ---
@@ -1147,7 +1129,7 @@
           throw new Error("Failed to load products.json");
         }
         const data = await response.json();
-        products = (data && data.products) || [];
+        products = data.products || [];
         renderProducts();
         renderInventoryPanel();
       } catch (error) {
@@ -1199,12 +1181,12 @@
       `).join('');
     }
 
-    // --- Render reviews ---
+    // --- Render reviews (sample + any future dynamic if you add) ---
     function renderReviews() {
       const strip = document.getElementById('reviews-strip');
       if (!strip) return;
 
-      const all = sampleReviews;
+      const all = sampleReviews; // later you can append real approved ones
       if (!all.length) {
         strip.innerHTML = "<p style='color:#666;'>No reviews yet.</p>";
         return;
@@ -1262,14 +1244,25 @@
       updateCartCount();
     }
 
+    function calculateCartTotals() {
+      const itemTotal = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
+      const shipping = itemTotal >= 500 || itemTotal === 0 ? 0 : 99;
+      const grandTotal = itemTotal + shipping;
+      return { itemTotal, shipping, grandTotal };
+    }
+
     function renderCartModal() {
       const emptyMsg = document.getElementById('cart-empty-message');
       const itemsContainer = document.getElementById('cart-items-container');
       const totalEl = document.getElementById('cart-total');
+      const shippingEl = document.getElementById('cart-shipping');
+      const grandTotalEl = document.getElementById('cart-grand-total');
 
       if (!cart.length) {
         if (itemsContainer) itemsContainer.innerHTML = "";
         if (totalEl) totalEl.textContent = "";
+        if (shippingEl) shippingEl.textContent = "";
+        if (grandTotalEl) grandTotalEl.textContent = "";
         if (emptyMsg) emptyMsg.style.display = "block";
         return;
       }
@@ -1296,20 +1289,12 @@
         `).join('');
       }
 
-      const subtotal = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
-      let deliveryFee = 0;
-      if (subtotal > 0 && subtotal < 500) {
-        deliveryFee = 99;
-      }
-      const grandTotal = subtotal + deliveryFee;
-
-      if (totalEl) {
-        totalEl.innerHTML = `
-          <div>Items total: ${subtotal} SEK</div>
-          <div>${subtotal >= 500 ? "Delivery: FREE (orders over 500 SEK)" : "Delivery: 99 SEK (free over 500 SEK)"}</div>
-          <div style="margin-top:0.25rem;font-weight:700;">Total to pay: ${grandTotal} SEK</div>
-        `;
-      }
+      const { itemTotal, shipping, grandTotal } = calculateCartTotals();
+      if (totalEl) totalEl.textContent = `Items total: ${itemTotal} SEK`;
+      if (shippingEl) shippingEl.textContent = shipping === 0
+        ? "Delivery: Free"
+        : `Delivery: 99 SEK`;
+      if (grandTotalEl) grandTotalEl.textContent = `Grand total: ${grandTotal} SEK`;
     }
 
     function openCartModal() {
@@ -1350,6 +1335,11 @@
       renderCartModal();
     }
 
+    function generateOrderId() {
+      const random = Math.floor(1000 + Math.random() * 9000);
+      return `ORD-${random}`;
+    }
+
     // --- Helper: add one item-row to backend/local orders ---
     function addOrderRowLocally(orderData) {
       const orderRow = {
@@ -1357,7 +1347,43 @@
         ...orderData
       };
       orders.push(orderRow);
-      saveOrdersToLocal();
+    }
+
+    // --- Needed to fulfil orders table (pending only) ---
+    function renderNeededTable() {
+      const tbody = document.querySelector("#neededTable tbody");
+      if (!tbody) return;
+
+      const pending = orders.filter(o => o.status !== "completed");
+      const map = new Map();
+
+      pending.forEach(o => {
+        const key = o.product_name || o.product_id;
+        if (!key) return;
+        const qty = Number(o.quantity || 0);
+        map.set(key, (map.get(key) || 0) + qty);
+      });
+
+      tbody.innerHTML = "";
+      for (const [name, qty] of map.entries()) {
+        const tr = document.createElement("tr");
+        const tdName = document.createElement("td");
+        tdName.textContent = name;
+        const tdQty = document.createElement("td");
+        tdQty.textContent = qty;
+        tr.appendChild(tdName);
+        tr.appendChild(tdQty);
+        tbody.appendChild(tr);
+      }
+
+      if (map.size === 0) {
+        const tr = document.createElement("tr");
+        const td = document.createElement("td");
+        td.colSpan = 2;
+        td.textContent = "No pending orders.";
+        tbody.appendChild(tr);
+        tr.appendChild(td);
+      }
     }
 
     // --- Handle full cart checkout ---
@@ -1378,9 +1404,6 @@
       submitBtn.innerHTML = 'Processing<span class="loading-spinner"></span>';
 
       try {
-        // Simple 4-digit order id: ORD-1234 style
-        const orderId = "ORD-" + String(Math.floor(1000 + Math.random() * 9000));
-
         const customerName = document.getElementById('customerName').value;
         const customerEmail = document.getElementById('customerEmail').value;
         const customerPhone = document.getElementById('customerPhone').value;
@@ -1388,9 +1411,9 @@
         const deliveryDate = document.getElementById('deliveryDate').value;
         const reviewOptIn = document.getElementById('reviewOptIn').checked;
         const orderDate = new Date().toISOString();
+        const orderId = generateOrderId();
 
-        const subtotal = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
-        const deliveryFee = subtotal > 0 && subtotal < 500 ? 99 : 0;
+        const { itemTotal, shipping, grandTotal } = calculateCartTotals();
 
         // Check stock again before finalising
         for (const item of cart) {
@@ -1404,7 +1427,7 @@
           }
         }
 
-        const rowsToCreate = cart.map((item, index) => ({
+        const rowsToCreate = cart.map(item => ({
           order_id: orderId,
           customer_name: customerName,
           customer_email: customerEmail,
@@ -1414,8 +1437,8 @@
           product_name: item.name,
           quantity: item.quantity,
           total_price: item.price * item.quantity,
-          payment_amount: item.price * item.quantity,
-          shipping_fee: index === 0 ? deliveryFee : 0,
+          payment_amount: grandTotal, // store grand total per line; can also store per item if you want
+          shipping_fee: shipping,
           payment_status: "unpaid",
           delivery_date: deliveryDate,
           order_date: orderDate,
@@ -1424,16 +1447,20 @@
         }));
 
         if (hasBackend) {
+          let backendOk = true;
           for (const row of rowsToCreate) {
             const result = await window.dataSdk.create(row);
             if (!result || !result.isOk) {
-              alert('There was an error placing your order. Some items may not have been saved.');
+              backendOk = false;
+              console.error("Error saving order row to backend:", result && result.error);
               break;
             }
             addOrderRowLocally(row);
           }
+          updateBackendStatus(backendOk);
         } else {
           rowsToCreate.forEach(row => addOrderRowLocally(row));
+          updateBackendStatus(false);
         }
 
         // Deduct stock based on cart and re-render both products and inventory panel
@@ -1449,7 +1476,7 @@
         renderInventoryPanel();
         renderOrdersTable();
         renderStats();
-        renderNeededToBake();
+        renderNeededTable();
 
         document.getElementById('successMessage').style.display = 'block';
         document.getElementById('orderForm').reset();
@@ -1507,75 +1534,24 @@
       hideCompleted = checked;
       renderOrdersTable();
       renderStats();
-      renderNeededToBake();
-      saveOrdersToLocal();
+      renderNeededTable();
     }
 
-    // --- Group orders by order_id (one logical order = many line items) ---
-    function getOrderGroups() {
-      const groupsMap = new Map();
-
-      for (const row of orders) {
-        const id = row.order_id || row.__backendId;
-
-        if (!groupsMap.has(id)) {
-          groupsMap.set(id, {
-            order_id: id,
-            customer_name: row.customer_name,
-            customer_email: row.customer_email,
-            customer_phone: row.customer_phone,
-            customer_address: row.customer_address || "",
-            items: [],
-            total_amount: 0,
-            payment_status: row.payment_status || "unpaid",
-            delivery_date: row.delivery_date,
-            order_date: row.order_date,
-            status: row.status || "pending",
-            review_opt_in: row.review_opt_in || "no"
-          });
-        }
-
-        const group = groupsMap.get(id);
-        group.items.push(`${row.product_name || row.product_id} x${row.quantity || 0}`);
-        group.total_amount += Number(row.payment_amount || row.total_price || 0);
-        group.total_amount += Number(row.shipping_fee || 0);
-
-        if (row.payment_status === "unpaid") {
-          group.payment_status = "unpaid";
-        }
-
-        if (row.status === "pending") {
-          group.status = "pending";
-        }
-      }
-
-      return Array.from(groupsMap.values());
-    }
-
-    function toggleOrderStatus(orderId) {
-      orders
-        .filter(o => (o.order_id || o.__backendId) === orderId)
-        .forEach(o => {
-          o.status = o.status === "completed" ? "pending" : "completed";
-        });
-
+    function toggleOrderStatus(backendId) {
+      const order = orders.find(o => o.__backendId === backendId);
+      if (!order) return;
+      order.status = order.status === "completed" ? "pending" : "completed";
       renderOrdersTable();
       renderStats();
-      renderNeededToBake();
-      saveOrdersToLocal();
+      renderNeededTable();
     }
 
-    function togglePaymentStatus(orderId) {
-      orders
-        .filter(o => (o.order_id || o.__backendId) === orderId)
-        .forEach(o => {
-          o.payment_status = o.payment_status === "paid" ? "unpaid" : "paid";
-        });
-
+    function togglePaymentStatus(backendId) {
+      const order = orders.find(o => o.__backendId === backendId);
+      if (!order) return;
+      order.payment_status = order.payment_status === "paid" ? "unpaid" : "paid";
       renderOrdersTable();
       renderStats();
-      renderNeededToBake();
-      saveOrdersToLocal();
     }
 
     // --- Analytics cards ---
@@ -1583,27 +1559,18 @@
       const container = document.getElementById('stats-grid');
       if (!container) return;
 
-      const allGroups = getOrderGroups();
-      const pendingGroups = allGroups.filter(g => g.status !== "completed");
+      const visibleOrders = orders; // stats always over all orders
 
-      const totalOrdersAll = allGroups.length;
-      const ordersLeft = pendingGroups.length;
-
-      const totalItems = orders.reduce(
-        (sum, o) => sum + Number(o.quantity || 0),
-        0
-      );
-
-      const totalRevenue = orders.reduce(
-        (sum, o) =>
-          sum +
-          Number(o.payment_amount || o.total_price || 0) +
-          Number(o.shipping_fee || 0),
-        0
-      );
+      const totalOrdersAllTime = visibleOrders.length;
+      const ordersLeft = visibleOrders.filter(o => o.status !== "completed").length;
+      const totalItemsAll = visibleOrders.reduce((sum, o) => sum + Number(o.quantity || 0), 0);
+      const totalRevenueAll = visibleOrders.reduce((sum, o) => {
+        const pay = Number(o.payment_amount || 0);
+        return sum + (isNaN(pay) ? 0 : pay);
+      }, 0);
 
       const byProduct = new Map();
-      orders.forEach(o => {
+      visibleOrders.forEach(o => {
         const key = o.product_name || o.product_id;
         if (!key) return;
         const qty = Number(o.quantity || 0);
@@ -1638,7 +1605,7 @@
       container.innerHTML = `
         <div class="stat-card">
           <div class="stat-label">Total orders (all time)</div>
-          <div class="stat-value">${totalOrdersAll}</div>
+          <div class="stat-value">${totalOrdersAllTime}</div>
           <div class="stat-sub">All orders placed</div>
         </div>
         <div class="stat-card">
@@ -1648,12 +1615,12 @@
         </div>
         <div class="stat-card">
           <div class="stat-label">Items sold</div>
-          <div class="stat-value">${totalItems}</div>
+          <div class="stat-value">${totalItemsAll}</div>
           <div class="stat-sub">Sum of quantities (all)</div>
         </div>
         <div class="stat-card">
           <div class="stat-label">Revenue (SEK)</div>
-          <div class="stat-value">${totalRevenue}</div>
+          <div class="stat-value">${totalRevenueAll}</div>
           <div class="stat-sub">Items + delivery fees</div>
         </div>
         <div class="stat-card">
@@ -1666,49 +1633,6 @@
           <div class="stat-value">${worstProduct}</div>
           <div class="stat-sub">${worstQty ? worstQty + " pcs" : "No data yet"}</div>
         </div>
-      `;
-    }
-
-    // --- Needed to fulfil orders (pending-only aggregation) ---
-    function renderNeededToBake() {
-      const panel = document.getElementById("needed-panel");
-      if (!panel) return;
-
-      const pendingRows = orders.filter(o => o.status !== "completed");
-
-      if (!pendingRows.length) {
-        panel.innerHTML = "<p style='font-size:0.9rem;color:#666;'>No pending orders. You're all caught up!</p>";
-        return;
-      }
-
-      const byProduct = new Map();
-      pendingRows.forEach(o => {
-        const key = o.product_name || o.product_id || "Unknown item";
-        const qty = Number(o.quantity || 0);
-        byProduct.set(key, (byProduct.get(key) || 0) + qty);
-      });
-
-      const rowsHtml = Array.from(byProduct.entries()).map(
-        ([name, qty]) => `
-          <tr>
-            <td style="padding:0.3rem 0.6rem;border-bottom:1px solid #f2e6d8;">${name}</td>
-            <td style="padding:0.3rem 0.6rem;border-bottom:1px solid #f2e6d8;text-align:right;">${qty}</td>
-          </tr>
-        `
-      ).join("");
-
-      panel.innerHTML = `
-        <table style="width:100%;border-collapse:collapse;font-size:0.9rem;">
-          <thead>
-            <tr>
-              <th style="text-align:left;padding:0.4rem 0.6rem;border-bottom:1px solid #eee;">Item</th>
-              <th style="text-align:right;padding:0.4rem 0.6rem;border-bottom:1px solid #eee;">Qty to bake</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${rowsHtml}
-          </tbody>
-        </table>
       `;
     }
 
@@ -1753,76 +1677,62 @@
       renderInventoryPanel();
     }
 
-    // --- Render backend orders table using grouped orders ---
+    // --- Render backend orders table ---
     function renderOrdersTable() {
       const tbody = document.querySelector('#ordersTable tbody');
       if (!tbody) return;
 
       tbody.innerHTML = '';
 
-      let allGroups = getOrderGroups();
-
-      // Sort by earliest delivery_date, then by earliest order_date
-      allGroups.sort((a, b) => {
-        const maxDate = new Date(8640000000000000);
-        const aDel = a.delivery_date ? new Date(a.delivery_date) : maxDate;
-        const bDel = b.delivery_date ? new Date(b.delivery_date) : maxDate;
-
-        if (aDel.getTime() !== bDel.getTime()) {
-          return aDel - bDel;
-        }
-
-        const aOrd = a.order_date ? new Date(a.order_date) : maxDate;
-        const bOrd = b.order_date ? new Date(b.order_date) : maxDate;
-
-        return aOrd - bOrd;
+      const sorted = [...orders].sort((a, b) => {
+        const da = a.delivery_date || "";
+        const db = b.delivery_date || "";
+        if (da < db) return -1;
+        if (da > db) return 1;
+        const oa = a.order_date || "";
+        const ob = b.order_date || "";
+        if (oa < ob) return -1;
+        if (oa > ob) return 1;
+        return 0;
       });
 
-      const visibleGroups = hideCompleted
-        ? allGroups.filter(g => g.status !== "completed")
-        : allGroups;
+      const filtered = hideCompleted
+        ? sorted.filter(o => o.status !== "completed")
+        : sorted;
 
-      visibleGroups.forEach(group => {
+      filtered.forEach(order => {
         const tr = document.createElement('tr');
-        if (group.status === "completed") {
+        if (order.status === "completed") {
           tr.classList.add('order-row-completed');
         }
 
         const cells = [
-          group.order_id,
-          group.customer_name,
-          group.customer_email,
-          group.customer_phone,
-          group.customer_address,
-          group.items.join(', '),
-          group.total_amount,
-          group.payment_status,
-          group.delivery_date,
-          group.order_date,
-          group.status,
-          group.review_opt_in
+          order.order_id,
+          order.customer_name,
+          order.customer_email,
+          order.customer_phone,
+          order.customer_address,
+          order.product_name,
+          order.quantity,
+          order.payment_amount,
+          order.payment_status,
+          order.delivery_date,
+          order.order_date,
+          order.status,
+          order.review_opt_in
         ];
 
         cells.forEach((value, idx) => {
           const td = document.createElement('td');
 
-          // payment_status column index = 7
-          if (idx === 7) {
+          if (idx === 8) { // payment_status
             const span = document.createElement('span');
-            span.classList.add(
-              'order-tag',
-              value === "paid" ? 'tag-paid' : 'tag-unpaid'
-            );
+            span.classList.add('order-tag', value === "paid" ? 'tag-paid' : 'tag-unpaid');
             span.textContent = value || "unpaid";
             td.appendChild(span);
-          }
-          // status column index = 10
-          else if (idx === 10) {
+          } else if (idx === 11) { // status
             const span = document.createElement('span');
-            span.classList.add(
-              'order-tag',
-              value === "completed" ? 'tag-completed' : 'tag-pending'
-            );
+            span.classList.add('order-tag', value === "completed" ? 'tag-completed' : 'tag-pending');
             span.textContent = value || "pending";
             td.appendChild(span);
           } else {
@@ -1836,19 +1746,17 @@
         actionsTd.classList.add('admin-actions');
 
         const statusBtn = document.createElement('button');
-        statusBtn.textContent =
-          group.status === "completed" ? "Mark pending" : "Mark done";
-        statusBtn.onclick = () => toggleOrderStatus(group.order_id);
+        statusBtn.textContent = order.status === "completed" ? "Mark pending" : "Mark done";
+        statusBtn.onclick = () => toggleOrderStatus(order.__backendId);
 
         const payBtn = document.createElement('button');
-        payBtn.textContent =
-          group.payment_status === "paid" ? "Set unpaid" : "Set paid";
-        payBtn.onclick = () => togglePaymentStatus(group.order_id);
+        payBtn.textContent = order.payment_status === "paid" ? "Set unpaid" : "Set paid";
+        payBtn.onclick = () => togglePaymentStatus(order.__backendId);
 
         actionsTd.appendChild(statusBtn);
         actionsTd.appendChild(payBtn);
-        tr.appendChild(actionsTd);
 
+        tr.appendChild(actionsTd);
         tbody.appendChild(tr);
       });
     }
@@ -1861,18 +1769,14 @@
       }
 
       const headers = [
-        "__backendId",
         "order_id",
         "customer_name",
         "customer_email",
         "customer_phone",
         "customer_address",
-        "product_id",
         "product_name",
         "quantity",
-        "total_price",
         "payment_amount",
-        "shipping_fee",
         "payment_status",
         "delivery_date",
         "order_date",
@@ -1881,18 +1785,14 @@
       ];
 
       const rows = orders.map(order => [
-        order.__backendId,
-        order.order_id || "",
+        order.order_id,
         order.customer_name,
         order.customer_email,
         order.customer_phone,
-        order.customer_address || "",
-        order.product_id,
+        order.customer_address,
         order.product_name,
         order.quantity,
-        order.total_price,
         order.payment_amount,
-        order.shipping_fee || 0,
         order.payment_status,
         order.delivery_date,
         order.order_date,
@@ -1957,7 +1857,7 @@
 
           return {
             __backendId: backendId,
-            order_id: row.order_id || `ORD-LEGACY-${backendId}`,
+            order_id: row.order_id || "",
             customer_name: row.customer_name || "",
             customer_email: row.customer_email || "",
             customer_phone: row.customer_phone || "",
@@ -1979,8 +1879,7 @@
         nextBackendId = orders.length + 1;
         renderOrdersTable();
         renderStats();
-        renderNeededToBake();
-        saveOrdersToLocal();
+        renderNeededTable();
       }
     };
 
@@ -1990,28 +1889,24 @@
       renderReviews();
       updateCartCount();
       renderStats();
-      renderNeededToBake();
+      renderNeededTable();
+      updateBackendStatus(false);
 
       if (hasBackend) {
         try {
           const dataResult = await window.dataSdk.init(dataHandler);
           if (!dataResult || !dataResult.isOk) {
-            console.error("Failed to initialize data SDK");
-            setBackendStatus("Backend: error – using local storage only", false);
-            // fallback to local
-            loadOrdersFromLocal();
+            console.error("Failed to initialize data SDK", dataResult && dataResult.error);
+            updateBackendStatus(false);
           } else {
-            setBackendStatus("Backend: connected to Supabase", true);
+            updateBackendStatus(true);
           }
-        } catch (e) {
-          console.error("Error while initializing backend", e);
-          setBackendStatus("Backend: error – using local storage only", false);
-          loadOrdersFromLocal();
+        } catch (err) {
+          console.error("Error during backend init:", err);
+          updateBackendStatus(false);
         }
       } else {
-        // No backend: restore from local storage
-        loadOrdersFromLocal();
-        setBackendStatus("Backend: not configured – using local storage only", false);
+        updateBackendStatus(false);
       }
 
       if (window.elementSdk) {
@@ -2075,4 +1970,3 @@
   </script>
  </body>
 </html>
-
