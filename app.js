@@ -1,21 +1,19 @@
 console.log("window.dataSdk at start:", window.dataSdk);
 
 // --- Global state ---
-let products = [];            // from products.json
-let cart = [];                // cart items: {productId, name, price, quantity}
-let orders = [];              // admin/backend table rows (one per item)
+let products = []; // from products.json
+let cart = []; // cart items: {productId, name, price, quantity}
+let orders = []; // admin/backend table rows (one per item)
 let nextBackendId = 1;
 let hideCompleted = false;
+let isSubmitting = false;
 
 let isAdmin = false;
 const ADMIN_PASSWORD = "mamaranta2024"; // change if you want
 
-// Swish phone number (local format, no +46 here)
-const SWISH_PHONE = "0728359978";
-
-// Keep latest order info for Swish deeplink
-let lastOrderAmount = 0;
-let lastOrderId = "";
+// Remember last order details for Swish box (if needed)
+let lastOrderAmount = null;
+let lastOrderId = null;
 
 const defaultConfig = {
   bakery_name: "Mama Ranta Bakery",
@@ -29,8 +27,6 @@ const defaultConfig = {
   primary_action_color: "#8b4513",
   secondary_action_color: "#d4a574"
 };
-
-let isSubmitting = false;
 
 const hasBackend =
   typeof window.dataSdk !== "undefined" &&
@@ -89,48 +85,57 @@ async function loadProducts() {
   }
 }
 
-// --- Render products ---
+// --- Render products grid with image + quantity + add-to-cart + stock ---
 function renderProducts() {
   const grid = document.getElementById("products-grid");
-  if (!grid) return;
-
-  grid.innerHTML = products.map(product => `
-    <div class="product-card">
-      <div class="product-image">
-        ${
-          product.image
-            ? `<img src="${product.image}" alt="${product.name}">`
-            : (product.emoji || "")
-        }
-      </div>
-      <div class="product-info">
-        <h3>${product.name}</h3>
-        <p>${product.description || ""}</p>
-        <div class="product-footer">
-          <div>
-            <div class="price">${product.price} SEK</div>
-            <div class="stock-label">
-              ${
-                product.stock > 0
-                  ? product.stock + " available"
-                  : "<span style='color:#b00020;'>Sold out</span>"
-              }
+  grid.innerHTML = products
+    .map(
+      (product) => `
+      <div class="product-card">
+        <div class="product-image">
+          ${
+            product.image
+              ? `<img src="${product.image}" alt="${product.name}">`
+              : product.emoji || ""
+          }
+        </div>
+        <div class="product-info">
+          <h3>${product.name}</h3>
+          <p>${product.description || ""}</p>
+          <div class="product-footer">
+            <div>
+              <div class="price">${product.price} SEK</div>
+              <div class="stock-label">
+                ${
+                  product.stock > 0
+                    ? product.stock + " available"
+                    : "<span style='color:#b00020;'>Sold out</span>"
+                }
+              </div>
             </div>
-          </div>
-          <div style="display:flex;flex-direction:column;gap:0.3rem;align-items:flex-end;">
-            <select class="qty-select" id="qty-${product.id}" ${product.stock === 0 ? "disabled" : ""}>
-              ${[...Array(10)].map((_,i)=>`<option value="${i+1}">${i+1}</option>`).join("")}
-            </select>
-            <button class="add-cart-btn" type="button"
-              onclick="addToCart('${product.id}')"
-              ${product.stock === 0 ? "disabled" : ""}>
-              Add to Cart
-            </button>
+            <div style="display:flex;flex-direction:column;gap:0.3rem;align-items:flex-end;">
+              <select class="qty-select" id="qty-${product.id}" ${
+        product.stock === 0 ? "disabled" : ""
+      }>
+                ${[...Array(10)]
+                  .map((_, i) => `<option value="${i + 1}">${i + 1}</option>`)
+                  .join("")}
+              </select>
+              <button
+                class="add-cart-btn"
+                type="button"
+                onclick="addToCart('${product.id}')"
+                ${product.stock === 0 ? "disabled" : ""}
+              >
+                Add to Cart
+              </button>
+            </div>
           </div>
         </div>
       </div>
-    </div>
-  `).join("");
+    `
+    )
+    .join("");
 }
 
 // --- Render reviews ---
@@ -144,13 +149,17 @@ function renderReviews() {
     return;
   }
 
-  strip.innerHTML = all.map(r => `
-    <article class="review-card">
-      <p class="review-text">${r.text}</p>
-      <p class="review-author">${r.author}</p>
-      <p class="review-meta">${r.meta}</p>
-    </article>
-  `).join("");
+  strip.innerHTML = all
+    .map(
+      (r) => `
+      <article class="review-card">
+        <p class="review-text">${r.text}</p>
+        <p class="review-author">${r.author}</p>
+        <p class="review-meta">${r.meta}</p>
+      </article>
+    `
+    )
+    .join("");
 }
 
 // --- Cart helpers ---
@@ -161,7 +170,7 @@ function updateCartCount() {
 }
 
 function addToCart(productId) {
-  const product = products.find(p => p.id === productId);
+  const product = products.find((p) => p.id === productId);
   if (!product) return;
   if (product.stock <= 0) {
     alert("This item is currently sold out.");
@@ -174,7 +183,7 @@ function addToCart(productId) {
     quantity = parseInt(qtySelect.value, 10) || 1;
   }
 
-  const existing = cart.find(item => item.productId === productId);
+  const existing = cart.find((item) => item.productId === productId);
   const alreadyInCart = existing ? existing.quantity : 0;
   if (alreadyInCart + quantity > product.stock) {
     alert(`Only ${product.stock} available. You already have ${alreadyInCart} in your cart.`);
@@ -188,7 +197,7 @@ function addToCart(productId) {
       productId: product.id,
       name: product.name,
       price: product.price,
-      quantity: quantity
+      quantity
     });
   }
 
@@ -215,39 +224,45 @@ function renderCartModal() {
     if (shippingEl) shippingEl.textContent = "";
     if (grandTotalEl) grandTotalEl.textContent = "";
     if (emptyMsg) emptyMsg.style.display = "block";
-    // hide Swish box when no items
-    const swishBox = document.getElementById("swish-box");
-    if (swishBox) swishBox.style.display = "none";
     return;
   }
 
   if (emptyMsg) emptyMsg.style.display = "none";
 
   if (itemsContainer) {
-    itemsContainer.innerHTML = `
+    itemsContainer.innerHTML =
+      `
       <div class="cart-header-row">
         <div>Item</div>
         <div style="text-align:center;">Quantity</div>
         <div style="text-align:right;">Total</div>
       </div>
-    ` + cart.map(item => `
-      <div class="cart-item-row">
-        <div class="cart-item-name">${item.name}</div>
-        <div class="cart-item-qty">
-          <button type="button" class="qty-btn" onclick="changeCartQuantity('${item.productId}', -1)">-</button>
-          <span>${item.quantity}</span>
-          <button type="button" class="qty-btn" onclick="changeCartQuantity('${item.productId}', 1)">+</button>
+    ` +
+      cart
+        .map(
+          (item) => `
+        <div class="cart-item-row">
+          <div class="cart-item-name">${item.name}</div>
+          <div class="cart-item-qty">
+            <button type="button" class="qty-btn" onclick="changeCartQuantity('${
+              item.productId
+            }', -1)">-</button>
+            <span>${item.quantity}</span>
+            <button type="button" class="qty-btn" onclick="changeCartQuantity('${
+              item.productId
+            }', 1)">+</button>
+          </div>
+          <div class="cart-item-total">${item.price * item.quantity} SEK</div>
         </div>
-        <div class="cart-item-total">${item.price * item.quantity} SEK</div>
-      </div>
-    `).join("");
+      `
+        )
+        .join("");
   }
 
   const { itemTotal, shipping, grandTotal } = calculateCartTotals();
   if (totalEl) totalEl.textContent = `Items total: ${itemTotal} SEK`;
-  if (shippingEl) shippingEl.textContent = shipping === 0
-    ? "Delivery: Free"
-    : "Delivery: 99 SEK";
+  if (shippingEl)
+    shippingEl.textContent = shipping === 0 ? "Delivery: Free" : `Delivery: 99 SEK`;
   if (grandTotalEl) grandTotalEl.textContent = `Grand total: ${grandTotal} SEK`;
 }
 
@@ -268,23 +283,19 @@ function closeCartModal() {
   if (form) form.reset();
   const success = document.getElementById("successMessage");
   if (success) success.style.display = "none";
-
-  const swishBox = document.getElementById("swish-box");
-  if (swishBox) swishBox.style.display = "none";
-
   isSubmitting = false;
 }
 
 function changeCartQuantity(productId, delta) {
-  const item = cart.find(i => i.productId === productId);
+  const item = cart.find((i) => i.productId === productId);
   if (!item) return;
 
-  const product = products.find(p => p.id === productId);
+  const product = products.find((p) => p.id === productId);
   const maxStock = product ? product.stock : Infinity;
 
   const newQty = item.quantity + delta;
   if (newQty <= 0) {
-    cart = cart.filter(i => i.productId !== productId);
+    cart = cart.filter((i) => i.productId !== productId);
   } else if (newQty > maxStock) {
     alert(`Only ${maxStock} available.`);
     return;
@@ -296,12 +307,69 @@ function changeCartQuantity(productId, delta) {
   renderCartModal();
 }
 
+// --- Order ID ---
 function generateOrderId() {
   const random = Math.floor(1000 + Math.random() * 9000);
   return `ORD-${random}`;
 }
 
-// --- Helper: add one item-row to backend/local orders ---
+// --- Swish UI helpers ---
+function updateSwishBox(amount, orderId) {
+  lastOrderAmount = amount;
+  lastOrderId = orderId;
+
+  const swishBox = document.getElementById("swish-box");
+  const phoneEl = document.getElementById("swish-phone");
+  const amountEl = document.getElementById("swish-amount");
+  const orderEl = document.getElementById("swish-order-id");
+
+  if (!swishBox || !phoneEl || !amountEl || !orderEl) return;
+
+  phoneEl.textContent = "0728 359 978";
+  amountEl.textContent = `${amount} kr`;
+  orderEl.textContent = orderId;
+
+  swishBox.style.display = "block";
+}
+
+function copySwishField(elementId) {
+  const el = document.getElementById(elementId);
+  if (!el) return;
+
+  const text = el.textContent.trim();
+  if (!text) return;
+
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard
+      .writeText(text)
+      .then(() => {
+        alert(`Copied: ${text}`);
+      })
+      .catch(() => {
+        fallbackCopyText(text);
+      });
+  } else {
+    fallbackCopyText(text);
+  }
+}
+
+function fallbackCopyText(text) {
+  const tempInput = document.createElement("input");
+  tempInput.style.position = "fixed";
+  tempInput.style.opacity = "0";
+  tempInput.value = text;
+  document.body.appendChild(tempInput);
+  tempInput.select();
+  try {
+    document.execCommand("copy");
+    alert(`Copied: ${text}`);
+  } catch (e) {
+    alert("Could not copy automatically, please select and copy manually.");
+  }
+  document.body.removeChild(tempInput);
+}
+
+// --- Local order row ---
 function addOrderRowLocally(orderData) {
   const orderRow = {
     __backendId: nextBackendId++,
@@ -315,10 +383,10 @@ function renderNeededTable() {
   const tbody = document.querySelector("#neededTable tbody");
   if (!tbody) return;
 
-  const pending = orders.filter(o => o.status !== "completed");
+  const pending = orders.filter((o) => o.status !== "completed");
   const map = new Map();
 
-  pending.forEach(o => {
+  pending.forEach((o) => {
     const key = o.product_name || o.product_id;
     if (!key) return;
     const qty = Number(o.quantity || 0);
@@ -347,62 +415,10 @@ function renderNeededTable() {
   }
 }
 
-// --- Swish helpers ---
-function updateSwishBox(amount, orderId) {
-  lastOrderAmount = amount;
-  lastOrderId = orderId;
-
-  const swishBox = document.getElementById("swish-box");
-  const phoneEl = document.getElementById("swish-phone");
-  const amountEl = document.getElementById("swish-amount");
-  const orderEl = document.getElementById("swish-order-id");
-
-  if (!swishBox || !phoneEl || !amountEl || !orderEl) return;
-
-  phoneEl.textContent = "0728 359 978";
-  amountEl.textContent = `${amount} kr`;
-  orderEl.textContent = orderId;
-
-  swishBox.style.display = "block";
-}
-
-async function copySwishDetails() {
-  const text = `Swish to: 0728 359 978\nAmount: ${lastOrderAmount} kr\nMessage: ${lastOrderId}`;
-  try {
-    await navigator.clipboard.writeText(text);
-    alert("Swish details copied. Open Swish and paste if needed.");
-  } catch (e) {
-    console.error("Clipboard error:", e);
-    alert("Could not copy automatically. Please note the number, amount and order ID.");
-  }
-}
-
-function openSwishApp() {
-  if (!lastOrderAmount || !lastOrderId) {
-    alert("Please place an order first.");
-    return;
-  }
-
-  // Deeplink payload (may still be rejected by Swish if the number is not a merchant setup)
-  const payload = {
-    version: 1,
-    payee: { value: SWISH_PHONE },
-    amount: { value: lastOrderAmount.toString(), currency: "SEK" },
-    message: { value: lastOrderId }
-  };
-
-  const json = JSON.stringify(payload);
-  const encoded = encodeURIComponent(json);
-  const url = `swish://payment?data=${encoded}`;
-
-  // Try to open Swish. If it fails, the user still has all details visible + copy.
-  window.location.href = url;
-}
-
-// --- Handle full cart checkout ---
+// --- Checkout handler ---
 async function handleOrderSubmit(event) {
   event.preventDefault();
-  
+
   if (isSubmitting) return;
   if (!cart.length) {
     alert("Your cart is empty.");
@@ -428,11 +444,13 @@ async function handleOrderSubmit(event) {
 
     const { itemTotal, shipping, grandTotal } = calculateCartTotals();
 
-    // Stock check
+    // Check stock again before finalising
     for (const item of cart) {
-      const product = products.find(p => p.id === item.productId);
+      const product = products.find((p) => p.id === item.productId);
       if (!product || product.stock < item.quantity) {
-        alert(`Not enough stock for ${item.name}. Available: ${product ? product.stock : 0}`);
+        alert(
+          `Not enough stock for ${item.name}. Available: ${product ? product.stock : 0}`
+        );
         submitBtn.disabled = false;
         submitBtn.textContent = originalText;
         isSubmitting = false;
@@ -440,7 +458,7 @@ async function handleOrderSubmit(event) {
       }
     }
 
-    const rowsToCreate = cart.map(item => ({
+    const rowsToCreate = cart.map((item) => ({
       order_id: orderId,
       customer_name: customerName,
       customer_email: customerEmail,
@@ -450,7 +468,7 @@ async function handleOrderSubmit(event) {
       product_name: item.name,
       quantity: item.quantity,
       total_price: item.price * item.quantity,
-      payment_amount: grandTotal, // same total on each line
+      payment_amount: grandTotal, // same grand total on each line
       shipping_fee: shipping,
       payment_status: "unpaid",
       delivery_date: deliveryDate,
@@ -472,13 +490,13 @@ async function handleOrderSubmit(event) {
       }
       updateBackendStatus(backendOk);
     } else {
-      rowsToCreate.forEach(row => addOrderRowLocally(row));
+      rowsToCreate.forEach((row) => addOrderRowLocally(row));
       updateBackendStatus(false);
     }
 
     // Deduct stock
-    cart.forEach(item => {
-      const product = products.find(p => p.id === item.productId);
+    cart.forEach((item) => {
+      const product = products.find((p) => p.id === item.productId);
       if (product) {
         product.stock -= item.quantity;
         if (product.stock < 0) product.stock = 0;
@@ -491,7 +509,7 @@ async function handleOrderSubmit(event) {
     renderStats();
     renderNeededTable();
 
-    // Update Swish panel with new order
+    // Update Swish details box
     updateSwishBox(grandTotal, orderId);
 
     const success = document.getElementById("successMessage");
@@ -499,7 +517,6 @@ async function handleOrderSubmit(event) {
 
     const form = document.getElementById("orderForm");
     if (form) form.reset();
-
     cart = [];
     updateCartCount();
     renderCartModal();
@@ -554,7 +571,7 @@ function toggleHideCompleted(checked) {
 }
 
 function toggleOrderStatus(backendId) {
-  const order = orders.find(o => o.__backendId === backendId);
+  const order = orders.find((o) => o.__backendId === backendId);
   if (!order) return;
   order.status = order.status === "completed" ? "pending" : "completed";
   renderOrdersTable();
@@ -563,7 +580,7 @@ function toggleOrderStatus(backendId) {
 }
 
 function togglePaymentStatus(backendId) {
-  const order = orders.find(o => o.__backendId === backendId);
+  const order = orders.find((o) => o.__backendId === backendId);
   if (!order) return;
   order.payment_status = order.payment_status === "paid" ? "unpaid" : "paid";
   renderOrdersTable();
@@ -575,18 +592,21 @@ function renderStats() {
   const container = document.getElementById("stats-grid");
   if (!container) return;
 
-  const visibleOrders = orders;
+  const visibleOrders = orders; // stats always over all orders
 
   const totalOrdersAllTime = visibleOrders.length;
-  const ordersLeft = visibleOrders.filter(o => o.status !== "completed").length;
-  const totalItemsAll = visibleOrders.reduce((sum, o) => sum + Number(o.quantity || 0), 0);
+  const ordersLeft = visibleOrders.filter((o) => o.status !== "completed").length;
+  const totalItemsAll = visibleOrders.reduce(
+    (sum, o) => sum + Number(o.quantity || 0),
+    0
+  );
   const totalRevenueAll = visibleOrders.reduce((sum, o) => {
     const pay = Number(o.payment_amount || 0);
     return sum + (isNaN(pay) ? 0 : pay);
   }, 0);
 
   const byProduct = new Map();
-  visibleOrders.forEach(o => {
+  visibleOrders.forEach((o) => {
     const key = o.product_name || o.product_id;
     if (!key) return;
     const qty = Number(o.quantity || 0);
@@ -605,7 +625,7 @@ function renderStats() {
         bestProduct = name;
       }
     }
-    const positive = [...byProduct.entries()].filter(([_, qty]) => qty > 0);
+    const positive = [...byProduct.entries()].filter(([, qty]) => qty > 0);
     if (positive.length > 0) {
       worstQty = positive[0][1];
       worstProduct = positive[0][0];
@@ -642,49 +662,59 @@ function renderStats() {
     <div class="stat-card">
       <div class="stat-label">Best seller</div>
       <div class="stat-value">${bestProduct}</div>
-      <div class="stat-sub">${bestQty ? bestQty + " pcs" : "No data yet"}</div>
+      <div class="stat-sub">${
+        bestQty ? bestQty + " pcs" : "No data yet"
+      }</div>
     </div>
     <div class="stat-card">
       <div class="stat-label">Least ordered</div>
       <div class="stat-value">${worstProduct}</div>
-      <div class="stat-sub">${worstQty ? worstQty + " pcs" : "No data yet"}</div>
+      <div class="stat-sub">${
+        worstQty ? worstQty + " pcs" : "No data yet"
+      }</div>
     </div>
   `;
 }
 
-// --- Inventory panel ---
+// --- Inventory panel (ADMIN: edit stock) ---
 function renderInventoryPanel() {
   const panel = document.getElementById("inventory-panel");
   if (!panel) return;
   if (!products.length) {
-    panel.innerHTML = "<p style='font-size:0.9rem;color:#666;'>No products loaded yet.</p>";
+    panel.innerHTML =
+      "<p style='font-size:0.9rem;color:#666;'>No products loaded yet.</p>";
     return;
   }
 
-  panel.innerHTML = products.map(prod => `
+  panel.innerHTML = products
+    .map(
+      (prod) => `
     <div style="
-      display:flex; 
-      justify-content:space-between; 
-      align-items:center; 
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
       padding:0.6rem 0;
-      border-bottom:1px solid #eee;">
+      border-bottom:1px solid #eee;
+    ">
       <div><strong>${prod.name}</strong></div>
       <div style="display:flex; gap:0.5rem; align-items:center;">
         <span style="font-size:0.8rem;color:#666;">Stock:</span>
-        <input 
-          type="number" 
+        <input
+          type="number"
           min="0"
-          value="${prod.stock}" 
+          value="${prod.stock}"
           style="width:80px; padding:0.3rem;"
           onchange="updateStock('${prod.id}', this.value)"
         >
       </div>
     </div>
-  `).join("");
+  `
+    )
+    .join("");
 }
 
 function updateStock(productId, value) {
-  const product = products.find(p => p.id === productId);
+  const product = products.find((p) => p.id === productId);
   if (!product) return;
   const newStock = Number(value);
   if (Number.isNaN(newStock) || newStock < 0) return;
@@ -713,10 +743,10 @@ function renderOrdersTable() {
   });
 
   const filtered = hideCompleted
-    ? sorted.filter(o => o.status !== "completed")
+    ? sorted.filter((o) => o.status !== "completed")
     : sorted;
 
-  filtered.forEach(order => {
+  filtered.forEach((order) => {
     const tr = document.createElement("tr");
     if (order.status === "completed") {
       tr.classList.add("order-row-completed");
@@ -741,14 +771,22 @@ function renderOrdersTable() {
     cells.forEach((value, idx) => {
       const td = document.createElement("td");
 
-      if (idx === 8) { // payment_status
+      if (idx === 8) {
+        // payment_status
         const span = document.createElement("span");
-        span.classList.add("order-tag", value === "paid" ? "tag-paid" : "tag-unpaid");
+        span.classList.add(
+          "order-tag",
+          value === "paid" ? "tag-paid" : "tag-unpaid"
+        );
         span.textContent = value || "unpaid";
         td.appendChild(span);
-      } else if (idx === 11) { // status
+      } else if (idx === 11) {
+        // status
         const span = document.createElement("span");
-        span.classList.add("order-tag", value === "completed" ? "tag-completed" : "tag-pending");
+        span.classList.add(
+          "order-tag",
+          value === "completed" ? "tag-completed" : "tag-pending"
+        );
         span.textContent = value || "pending";
         td.appendChild(span);
       } else {
@@ -762,11 +800,13 @@ function renderOrdersTable() {
     actionsTd.classList.add("admin-actions");
 
     const statusBtn = document.createElement("button");
-    statusBtn.textContent = order.status === "completed" ? "Mark pending" : "Mark done";
+    statusBtn.textContent =
+      order.status === "completed" ? "Mark pending" : "Mark done";
     statusBtn.onclick = () => toggleOrderStatus(order.__backendId);
 
     const payBtn = document.createElement("button");
-    payBtn.textContent = order.payment_status === "paid" ? "Set unpaid" : "Set paid";
+    payBtn.textContent =
+      order.payment_status === "paid" ? "Set unpaid" : "Set paid";
     payBtn.onclick = () => togglePaymentStatus(order.__backendId);
 
     actionsTd.appendChild(statusBtn);
@@ -800,7 +840,7 @@ function downloadOrdersCsv() {
     "review_opt_in"
   ];
 
-  const rows = orders.map(order => [
+  const rows = orders.map((order) => [
     order.order_id,
     order.customer_name,
     order.customer_email,
@@ -816,10 +856,9 @@ function downloadOrdersCsv() {
     order.review_opt_in
   ]);
 
-  const csvContent = [
-    headers.join(";"),
-    ...rows.map(r => r.map(value => String(value)).join(";"))
-  ].join("\n");
+  const csvContent = [headers.join(";"), ...rows.map((r) => r.map(String).join(";"))].join(
+    "\n"
+  );
 
   const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
   const url = URL.createObjectURL(blob);
@@ -833,31 +872,7 @@ function downloadOrdersCsv() {
   URL.revokeObjectURL(url);
 }
 
-// --- Config / theming (optional if elementSdk exists) ---
-async function onConfigChange(config) {
-  document.getElementById("bakery-name").textContent = config.bakery_name || defaultConfig.bakery_name;
-  document.getElementById("tagline").textContent = config.tagline || defaultConfig.tagline;
-  document.getElementById("contact-phone").textContent = config.contact_phone || defaultConfig.contact_phone;
-  document.getElementById("contact-email").textContent = config.contact_email || defaultConfig.contact_email;
-  document.getElementById("contact-address").textContent = config.contact_address || defaultConfig.contact_address;
-
-  document.body.style.background = config.background_color || defaultConfig.background_color;
-  
-  const surfaces = document.querySelectorAll(".header, .product-card, .contact, .modal-content, .review-card");
-  surfaces.forEach(el => el.style.background = config.surface_color || defaultConfig.surface_color);
-
-  const textElements = document.querySelectorAll("body, .product-info h3, .contact-text h4, label, .modal h3");
-  textElements.forEach(el => el.style.color = config.text_color || defaultConfig.text_color);
-
-  const primaryButtons = document.querySelectorAll(".add-cart-btn, .submit-btn");
-  primaryButtons.forEach(btn => {
-    btn.style.background = config.primary_action_color || defaultConfig.primary_action_color;
-  });
-
-  const hero = document.querySelector(".hero");
-  hero.style.background = `linear-gradient(135deg, ${config.secondary_action_color || defaultConfig.secondary_action_color} 0%, ${config.primary_action_color || defaultConfig.primary_action_color} 100%)`;
-}
-
+// --- Backend data handler ---
 const dataHandler = {
   onDataChanged(data) {
     if (!Array.isArray(data)) {
@@ -908,16 +923,6 @@ async function init() {
   renderNeededTable();
   updateBackendStatus(false);
 
-  // Swish button handlers
-  const swishCopyBtn = document.getElementById("swish-copy-all");
-  if (swishCopyBtn) {
-    swishCopyBtn.addEventListener("click", copySwishDetails);
-  }
-  const swishOpenBtn = document.getElementById("swish-open-app");
-  if (swishOpenBtn) {
-    swishOpenBtn.addEventListener("click", openSwishApp);
-  }
-
   if (hasBackend) {
     try {
       const dataResult = await window.dataSdk.init(dataHandler);
@@ -933,62 +938,6 @@ async function init() {
     }
   } else {
     updateBackendStatus(false);
-  }
-
-  if (window.elementSdk) {
-    window.elementSdk.init({
-      defaultConfig,
-      onConfigChange,
-      mapToCapabilities: (config) => ({
-        recolorables: [
-          {
-            get: () => config.background_color || defaultConfig.background_color,
-            set: (value) => {
-              config.background_color = value;
-              window.elementSdk.setConfig({ background_color: value });
-            }
-          },
-          {
-            get: () => config.surface_color || defaultConfig.surface_color,
-            set: (value) => {
-              config.surface_color = value;
-              window.elementSdk.setConfig({ surface_color: value });
-            }
-          },
-          {
-            get: () => config.text_color || defaultConfig.text_color,
-            set: (value) => {
-              config.text_color = value;
-              window.elementSdk.setConfig({ text_color: value });
-            }
-          },
-          {
-            get: () => config.primary_action_color || defaultConfig.primary_action_color,
-            set: (value) => {
-              config.primary_action_color = value;
-              window.elementSdk.setConfig({ primary_action_color: value });
-            }
-          },
-          {
-            get: () => config.secondary_action_color || defaultConfig.secondary_action_color,
-            set: (value) => {
-              config.secondary_action_color = value;
-              window.elementSdk.setConfig({ secondary_action_color: value });
-            }
-          }
-        ],
-        borderables: [],
-        fontEditable: undefined,
-        fontSizeable: undefined
-      }),
-      mapToEditPanelValues: (config) => new Map([
-        ["bakery_name", config.bakery_name || defaultConfig.bakery_name],
-        ["tagline", config.tagline || defaultConfig.tagline],
-        ["contact_phone", config.contact_phone || defaultConfig.contact_phone],
-        ["contact_email", config.contact_email || defaultConfig.contact_email],
-        ["contact_address", config.contact_address || defaultConfig.contact_address]
-      ])
-    });
   }
 }
 
