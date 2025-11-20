@@ -1,0 +1,1151 @@
+<!doctype html>
+<html lang="sv">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mama Ranta Bakery</title>
+
+  <!-- Optional SDK (safe even if not present) -->
+  <script src="_sdk/data_sdk.js"></script>
+
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700&family=Inter:wght@300;400;500;600&display=swap');
+
+    body {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: #f9f6f2;
+      color: #2c1810;
+      overflow-x: hidden;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    /* Header */
+    .header {
+      background: #fff;
+      padding: 1.5rem 5%;
+      box-shadow: 0 1px 20px rgba(0,0,0,0.04);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      backdrop-filter: blur(10px);
+    }
+
+    .header-content {
+      max-width: 1200px;
+      margin: 0 auto;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+
+    .logo-section h1 {
+      margin: 0;
+      font-size: 2.1rem;
+      color: #8b4513;
+      font-weight: 400;
+      letter-spacing: 2px;
+      font-family: 'Playfair Display', serif;
+    }
+
+    .logo-section p {
+      margin: 0.3rem 0 0 0;
+      font-size: 0.8rem;
+      color: #666;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      font-weight: 300;
+    }
+
+    .nav-links {
+      display: flex;
+      gap: 0.8rem;
+      align-items: center;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+
+    .nav-links a {
+      color: #2c1810;
+      text-decoration: none;
+      font-size: 0.9rem;
+      transition: color 0.3s;
+      cursor: pointer;
+      font-weight: 500;
+      letter-spacing: 0.5px;
+    }
+
+    .nav-links a:hover {
+      color: #8b4513;
+    }
+
+    .admin-btn,
+    .cart-btn {
+      background: transparent;
+      border: 1px solid #8b4513;
+      color: #8b4513;
+      padding: 0.35rem 0.9rem;
+      border-radius: 999px;
+      font-size: 0.8rem;
+      cursor: pointer;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      transition: all 0.2s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.3rem;
+    }
+
+    .admin-btn:hover,
+    .cart-btn:hover {
+      background: #8b4513;
+      color: #fff;
+    }
+
+    .cart-count {
+      background: #8b4513;
+      color: #fff;
+      border-radius: 999px;
+      padding: 0 0.4rem;
+      font-size: 0.7rem;
+      min-width: 1.2rem;
+      text-align: center;
+    }
+
+    /* Hero Section */
+    .hero {
+      background: linear-gradient(135deg, #d4a574 0%, #8b4513 100%);
+      padding: 4rem 5%;
+      text-align: center;
+      color: #fff;
+    }
+
+    .hero h2 {
+      font-size: 3rem;
+      margin: 0 0 1rem 0;
+      font-weight: 400;
+      font-family: 'Playfair Display', serif;
+      letter-spacing: 1px;
+    }
+
+    .hero p {
+      font-size: 1.1rem;
+      margin: 0 0 2rem 0;
+      opacity: 0.95;
+      font-weight: 300;
+      letter-spacing: 0.5px;
+    }
+
+    /* Products Section */
+    .products {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 4rem 5%;
+    }
+
+    .section-title {
+      text-align: center;
+      font-size: 2.5rem;
+      color: #8b4513;
+      margin: 0 0 3rem 0;
+      font-weight: 400;
+      font-family: 'Playfair Display', serif;
+      letter-spacing: 1px;
+    }
+
+    .products-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 2rem;
+    }
+
+    .product-card {
+      background: #fff;
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: 0 2px 20px rgba(0,0,0,0.06);
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+      border: 1px solid rgba(139, 69, 19, 0.08);
+    }
+
+    .product-card:hover {
+      transform: translateY(-8px);
+      box-shadow: 0 12px 35px rgba(0,0,0,0.15);
+    }
+
+    .product-image {
+      height: 200px;
+      background: #f5f1ea;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+
+    .product-image img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    .product-info {
+      padding: 1.5rem;
+    }
+
+    .product-info h3 {
+      margin: 0 0 0.5rem 0;
+      font-size: 1.4rem;
+      color: #2c1810;
+      font-family: 'Playfair Display', serif;
+      font-weight: 500;
+    }
+
+    .product-info p {
+      margin: 0 0 1rem 0;
+      color: #666;
+      font-size: 0.9rem;
+      line-height: 1.6;
+      font-weight: 300;
+    }
+
+    .product-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 0.5rem;
+      margin-top: 0.5rem;
+      flex-wrap: wrap;
+    }
+
+    .price {
+      font-size: 1.1rem;
+      color: #8b4513;
+      font-weight: 600;
+    }
+
+    .stock-label {
+      font-size: 0.85rem;
+      color: #666;
+    }
+
+    .qty-select {
+      border-radius: 999px;
+      border: 1px solid #d4a574;
+      padding: 0.2rem 0.6rem;
+      font-size: 0.8rem;
+      background: #fdfaf5;
+    }
+
+    .add-cart-btn {
+      background: #8b4513;
+      color: #fff;
+      border: none;
+      padding: 0.5rem 1.2rem;
+      border-radius: 30px;
+      cursor: pointer;
+      font-size: 0.85rem;
+      transition: all 0.3s ease;
+      font-family: 'Inter', sans-serif;
+      font-weight: 500;
+      letter-spacing: 0.5px;
+      white-space: nowrap;
+    }
+
+    .add-cart-btn:hover:not(:disabled) {
+      background: #a0522d;
+      transform: scale(1.05);
+    }
+
+    .add-cart-btn:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+
+    /* Reviews section */
+    .reviews {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 4rem 5%;
+    }
+
+    .reviews-strip {
+      display: flex;
+      gap: 1.5rem;
+      overflow-x: auto;
+      padding-bottom: 0.5rem;
+    }
+
+    .review-card {
+      min-width: 260px;
+      background: #fff;
+      border-radius: 16px;
+      padding: 1.5rem;
+      box-shadow: 0 2px 14px rgba(0,0,0,0.06);
+      border: 1px solid rgba(139, 69, 19, 0.07);
+      position: relative;
+    }
+
+    .review-card::before {
+      content: "“";
+      position: absolute;
+      font-size: 3rem;
+      color: #f0d19b;
+      top: 0.3rem;
+      left: 0.8rem;
+      opacity: 0.3;
+    }
+
+    .review-text {
+      font-size: 0.95rem;
+      line-height: 1.6;
+      margin-bottom: 0.8rem;
+    }
+
+    .review-author {
+      font-weight: 600;
+      color: #8b4513;
+      font-size: 0.9rem;
+    }
+
+    .review-meta {
+      font-size: 0.8rem;
+      color: #777;
+    }
+
+    /* Contact & About Sections */
+    .contact {
+      background: #fff;
+      padding: 4rem 5%;
+      margin-top: 4rem;
+    }
+
+    .contact-content {
+      max-width: 1200px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 3rem;
+    }
+
+    .contact-info h3 {
+      color: #8b4513;
+      font-size: 1.8rem;
+      margin: 0 0 1.5rem 0;
+      font-family: 'Playfair Display', serif;
+      font-weight: 500;
+      letter-spacing: 0.5px;
+    }
+
+    .contact-item {
+      display: flex;
+      align-items: start;
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .contact-icon {
+      font-size: 1.5rem;
+      color: #8b4513;
+    }
+
+    .contact-text h4 {
+      margin: 0 0 0.3rem 0;
+      color: #2c1810;
+      font-size: 1rem;
+    }
+
+    .contact-text p {
+      margin: 0;
+      color: #666;
+      font-size: 0.95rem;
+    }
+
+    /* Modal */
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.6);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+    }
+
+    .modal.active {
+      display: flex;
+    }
+
+    .modal-content {
+      background: #fff;
+      border-radius: 20px;
+      max-width: 600px;
+      width: 100%;
+      max-height: 90%;
+      overflow-y: auto;
+      padding: 2.5rem;
+      position: relative;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    }
+
+    .modal-close {
+      position: absolute;
+      top: 1rem;
+      right: 1rem;
+      background: none;
+      border: none;
+      font-size: 2rem;
+      color: #666;
+      cursor: pointer;
+      line-height: 1;
+      padding: 0;
+      width: 2rem;
+      height: 2rem;
+    }
+
+    .modal-close:hover {
+      color: #8b4513;
+    }
+
+    .modal h3 {
+      color: #8b4513;
+      margin: 0 0 1.5rem 0;
+      font-size: 2rem;
+      font-family: 'Playfair Display', serif;
+      font-weight: 500;
+      letter-spacing: 0.5px;
+    }
+
+    .form-group {
+      margin-bottom: 1.5rem;
+    }
+
+    .form-group label {
+      display: block;
+      margin-bottom: 0.5rem;
+      color: #2c1810;
+      font-weight: 500;
+      font-size: 0.9rem;
+      letter-spacing: 0.3px;
+    }
+
+    .form-group input {
+      width: 100%;
+      padding: 0.9rem;
+      border: 2px solid #e8e8e8;
+      border-radius: 10px;
+      font-size: 0.95rem;
+      font-family: 'Inter', sans-serif;
+      transition: all 0.3s ease;
+      background: #fafafa;
+    }
+
+    .form-group input:focus {
+      outline: none;
+      border-color: #8b4513;
+      background: #fff;
+      box-shadow: 0 0 0 3px rgba(139, 69, 19, 0.1);
+    }
+
+    .form-inline {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.85rem;
+      color: #555;
+    }
+
+    .form-inline input[type="checkbox"] {
+      width: auto;
+      height: auto;
+      padding: 0;
+      border-radius: 4px;
+      box-shadow: none;
+    }
+
+    .submit-btn {
+      width: 100%;
+      background: #8b4513;
+      color: #fff;
+      border: none;
+      padding: 1.1rem;
+      border-radius: 30px;
+      cursor: pointer;
+      font-size: 1rem;
+      transition: all 0.3s ease;
+      font-family: 'Inter', sans-serif;
+      margin-top: 1rem;
+      font-weight: 600;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+    }
+
+    .submit-btn:hover:not(:disabled) {
+      background: #a0522d;
+      transform: translateY(-2px);
+      box-shadow: 0 8px 20px rgba(139, 69, 19, 0.3);
+    }
+
+    .submit-btn:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .success-message {
+      background: #d4edda;
+      border: 2px solid #28a745;
+      border-radius: 8px;
+      padding: 1.5rem;
+      margin: 1rem 0;
+      color: #155724;
+      text-align: center;
+    }
+
+    /* Swish payment box */
+    .payment-section {
+      margin: 1.5rem 0 0.5rem;
+      padding: 1.2rem 1.4rem;
+      border-radius: 14px;
+      background: #f6fff8;
+      border: 1px solid #b6e2c4;
+      display: flex;
+      gap: 1.25rem;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .payment-qr {
+      flex: 0 0 110px;
+      height: 110px;
+      border-radius: 12px;
+      background: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      border: 1px solid #e2f2e6;
+    }
+
+    .payment-qr img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+    }
+
+    .payment-text {
+      flex: 1;
+      min-width: 220px;
+      font-size: 0.9rem;
+      color: #35503b;
+    }
+
+    .payment-text strong {
+      color: #204327;
+    }
+
+    .payment-amount,
+    .payment-orderid {
+      font-size: 0.95rem;
+      margin: 0.2rem 0;
+    }
+
+    .payment-note {
+      font-size: 0.8rem;
+      margin-top: 0.5rem;
+      color: #4a6a53;
+    }
+
+    .payment-open-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      margin-top: 0.6rem;
+      padding: 0.55rem 1.1rem;
+      border-radius: 999px;
+      border: none;
+      background: #00a45a;
+      color: #fff;
+      font-size: 0.85rem;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      cursor: pointer;
+      text-decoration: none;
+    }
+
+    .payment-open-btn:hover {
+      background: #019251;
+    }
+
+    /* Cart list */
+    .cart-items-list {
+      border-radius: 12px;
+      border: 1px solid #eee;
+      padding: 1rem;
+      margin-bottom: 1.5rem;
+      max-height: 250px;
+      overflow-y: auto;
+      background: #fdfaf5;
+    }
+
+    .cart-header-row {
+      display: grid;
+      grid-template-columns: 2fr 1fr 1fr;
+      gap: 0.5rem;
+      font-size: 0.8rem;
+      font-weight: 600;
+      padding-bottom: 0.4rem;
+      border-bottom: 1px solid #ddd;
+    }
+
+    .cart-item-row {
+      display: grid;
+      grid-template-columns: 2fr 1fr 1fr;
+      gap: 0.5rem;
+      font-size: 0.9rem;
+      padding: 0.4rem 0;
+      border-bottom: 1px solid #eee;
+      align-items: center;
+    }
+
+    .cart-item-row:last-child {
+      border-bottom: none;
+    }
+
+    .cart-item-name {
+      font-weight: 500;
+      color: #2c1810;
+    }
+
+    .cart-item-qty {
+      text-align: center;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.4rem;
+    }
+
+    .cart-item-total {
+      text-align: right;
+      font-weight: 500;
+      color: #8b4513;
+    }
+
+    .cart-summary-total {
+      text-align: right;
+      font-size: 1rem;
+      font-weight: 600;
+      margin-top: 0.5rem;
+      color: #8b4513;
+    }
+
+    .qty-btn {
+      border-radius: 999px;
+      border: 1px solid #d4a574;
+      background: #fff7e8;
+      padding: 0.15rem 0.5rem;
+      font-size: 0.85rem;
+      cursor: pointer;
+      line-height: 1;
+    }
+
+    .qty-btn:hover {
+      background: #f0d19b;
+    }
+
+    .footer {
+      background: #2c1810;
+      color: #fff;
+      text-align: center;
+      padding: 2rem 5%;
+      margin-top: 4rem;
+    }
+
+    .footer p {
+      margin: 0;
+      opacity: 0.8;
+    }
+
+    /* Admin / backend section hidden by default */
+    #admin {
+      display: none;
+    }
+
+    .admin-header-row {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+      align-items: center;
+    }
+
+    /* Analytics cards */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .stat-card {
+      background: #fff7e8;
+      border-radius: 12px;
+      padding: 0.9rem 1.1rem;
+      border: 1px solid rgba(139,69,19,0.15);
+    }
+
+    .stat-label {
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #8b6b3c;
+      margin-bottom: 0.25rem;
+    }
+
+    .stat-value {
+      font-size: 1.2rem;
+      font-weight: 600;
+      color: #8b4513;
+    }
+
+    .stat-sub {
+      font-size: 0.75rem;
+      color: #777;
+    }
+
+    .table-wrapper {
+      overflow-x: auto;
+      background: #fff;
+      border-radius: 12px;
+      box-shadow: 0 2px 20px rgba(0,0,0,0.06);
+      border: 1px solid rgba(139, 69, 19, 0.08);
+    }
+
+    #ordersTable {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 960px;
+    }
+
+    #ordersTable thead {
+      background: #f9f6f2;
+    }
+
+    #ordersTable th,
+    #ordersTable td {
+      padding: 0.6rem 0.8rem;
+      font-size: 0.85rem;
+      text-align: left;
+      border-bottom: 1px solid #eee;
+      white-space: nowrap;
+    }
+
+    #ordersTable th {
+      font-weight: 600;
+      color: #8b4513;
+    }
+
+    #ordersTable tbody tr:nth-child(even) {
+      background: #fafafa;
+    }
+
+    .order-row-completed {
+      opacity: 0.6;
+      text-decoration: line-through;
+    }
+
+    .order-tag {
+      font-size: 0.75rem;
+      padding: 0.15rem 0.5rem;
+      border-radius: 999px;
+      display: inline-block;
+    }
+
+    .tag-pending {
+      background: #fff3cd;
+      color: #7a5b15;
+    }
+
+    .tag-completed {
+      background: #d4edda;
+      color: #155724;
+    }
+
+    .tag-unpaid {
+      background: #f8d7da;
+      color: #721c24;
+    }
+
+    .tag-paid {
+      background: #d1ecf1;
+      color: #0c5460;
+    }
+
+    .admin-actions button {
+      border-radius: 999px;
+      border: 1px solid #d4a574;
+      background: #fff7e8;
+      padding: 0.15rem 0.6rem;
+      font-size: 0.8rem;
+      cursor: pointer;
+      margin-right: 0.3rem;
+    }
+
+    .admin-actions button:hover {
+      background: #f0d19b;
+    }
+
+    .loading-spinner {
+      display: inline-block;
+      width: 1rem;
+      height: 1rem;
+      border: 2px solid #fff;
+      border-radius: 50%;
+      border-top-color: transparent;
+      animation: spin 0.8s linear infinite;
+      margin-left: 0.5rem;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    /* Mobile tweaks */
+    @media (max-width: 768px) {
+      .header-content {
+        flex-direction: column;
+        text-align: center;
+      }
+
+      .nav-links {
+        flex-wrap: wrap;
+        justify-content: center;
+      }
+
+      .hero h2 {
+        font-size: 2rem;
+      }
+
+      .hero p {
+        font-size: 1rem;
+      }
+
+      .products-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .logo-section h1 {
+        font-size: 1.8rem;
+      }
+
+      .section-title {
+        font-size: 2rem;
+      }
+
+      .cart-item-row,
+      .cart-header-row {
+        grid-template-columns: 1.5fr 0.8fr 0.8fr;
+      }
+
+      .add-cart-btn {
+        width: 100%;
+      }
+
+      .qty-select {
+        width: 100%;
+      }
+
+      .payment-section {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header class="header">
+    <div class="header-content">
+      <div class="logo-section">
+        <h1 id="bakery-name">Mama Ranta Bakery</h1>
+        <p id="tagline">Authentic Swedish Baked Goods</p>
+      </div>
+      <nav class="nav-links">
+        <a onclick="scrollToSection('products')">Products</a>
+        <a onclick="scrollToSection('reviews')">Reviews</a>
+        <a onclick="scrollToSection('about')">About</a>
+        <a onclick="scrollToSection('contact')">Contact</a>
+        <a onclick="scrollToSection('hero')">Home</a>
+        <button class="cart-btn" type="button" onclick="openCartModal()">
+          🛒 Cart <span id="cart-count" class="cart-count">0</span>
+        </button>
+        <button class="admin-btn" type="button" onclick="toggleAdminLogin()">Admin</button>
+      </nav>
+    </div>
+  </header>
+
+  <section class="hero" id="hero">
+    <h2>Välkommen till Mama Ranta</h2>
+    <p>Experience the authentic taste of Sweden with our handcrafted pastries and breads.</p>
+  </section>
+
+  <section class="products" id="products">
+    <h2 class="section-title">Our Signature Products</h2>
+    <div class="products-grid" id="products-grid"></div>
+  </section>
+
+  <!-- Reviews section -->
+  <section class="reviews" id="reviews">
+    <h2 class="section-title">What Our Guests Say</h2>
+    <div class="reviews-strip" id="reviews-strip"></div>
+  </section>
+
+  <!-- About section -->
+  <section class="contact" id="about">
+    <h2 class="section-title">About Us</h2>
+    <div style="max-width:1200px; margin:0 auto; display:grid; grid-template-columns: repeat(auto-fit, minmax(320px,1fr)); gap:2.5rem;">
+      <div>
+        <img src="images/about-1.jpg" style="width:100%; border-radius:16px; box-shadow:0 4px 12px rgba(0,0,0,0.1);" alt="Baking at home">
+        <h3 style="margin-top:1rem; font-size:1.8rem; font-family:'Playfair Display'; color:#8b4513;">
+          Our Story
+        </h3>
+        <p style="line-height:1.6; color:#444;">
+          Mama Ranta Bakery began as a small home-kitchen dream and has grown into a beloved neighbourhood name.
+          Every pastry is baked fresh using Swedish techniques, premium ingredients, and a whole lot of love.
+        </p>
+      </div>
+      <div>
+        <img src="images/about-2.jpg" style="width:100%; border-radius:16px; box-shadow:0 4px 12px rgba(0,0,0,0.1);" alt="Home baker portrait">
+        <h3 style="margin-top:1rem; font-size:1.8rem; font-family:'Playfair Display'; color:#8b4513;">
+          Meet the Baker
+        </h3>
+        <p style="line-height:1.6; color:#444;">
+          As a home baker, every batch is small and every detail matters.
+          From kanelbullar to prinsesstårta, each order is handcrafted to bring a little fika joy to your day.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <section class="contact" id="contact">
+    <h2 class="section-title">Visit Us</h2>
+    <div class="contact-content">
+      <div class="contact-info">
+        <h3>Get in Touch</h3>
+        <div class="contact-item">
+          <div class="contact-icon">📞</div>
+          <div class="contact-text">
+            <h4>Phone</h4>
+            <p id="contact-phone">+46 8 123 4567</p>
+          </div>
+        </div>
+        <div class="contact-item">
+          <div class="contact-icon">✉️</div>
+          <div class="contact-text">
+            <h4>Email</h4>
+            <p id="contact-email">hello@mamaranta.se</p>
+          </div>
+        </div>
+        <div class="contact-item">
+          <div class="contact-icon">📍</div>
+          <div class="contact-text">
+            <h4>Address</h4>
+            <p id="contact-address">Storgatan 12, Stockholm</p>
+          </div>
+        </div>
+      </div>
+      <div class="contact-info">
+        <h3>Opening Hours</h3>
+        <div class="contact-item">
+          <div class="contact-icon">🕐</div>
+          <div class="contact-text">
+            <h4>Monday - Friday</h4>
+            <p>7:00 AM - 6:00 PM</p>
+          </div>
+        </div>
+        <div class="contact-item">
+          <div class="contact-icon">🕐</div>
+          <div class="contact-text">
+            <h4>Saturday - Sunday</h4>
+            <p>8:00 AM - 5:00 PM</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Admin / Backend Orders & Inventory -->
+  <section class="contact" id="admin">
+    <h2 class="section-title">Orders & Admin</h2>
+    <div style="max-width: 1200px; margin: 0 auto;">
+
+      <div class="admin-header-row">
+        <div>
+          <label style="font-size:0.85rem;">
+            <input type="checkbox" id="hideCompletedCheckbox" onchange="toggleHideCompleted(this.checked)">
+            Hide completed orders
+          </label>
+          <div id="backend-status" style="font-size:0.8rem;margin-top:0.25rem;color:#a15b00;">
+            Backend: checking...
+          </div>
+        </div>
+        <div>
+          <button class="add-cart-btn" type="button" onclick="downloadOrdersCsv()">
+            Download Orders (CSV)
+          </button>
+        </div>
+      </div>
+
+      <!-- Analytics cards -->
+      <div class="stats-grid" id="stats-grid"></div>
+
+      <!-- Inventory panel -->
+      <h3 style="font-family:'Playfair Display'; color:#8b4513; margin-bottom:0.5rem;">
+        Inventory Management
+      </h3>
+      <div id="inventory-panel" style="padding:1rem; background:#fff7e8; border-radius:12px; margin-bottom:2rem;"></div>
+
+      <!-- Needed to fulfil orders -->
+      <h3 style="font-family:'Playfair Display'; color:#8b4513; margin-bottom:0.5rem;">
+        Needed to fulfil orders
+      </h3>
+      <div class="table-wrapper" style="margin-bottom:2rem;">
+        <table id="neededTable">
+          <thead>
+            <tr>
+              <th>Item</th>
+              <th>Qty to bake</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+
+      <!-- Orders table -->
+      <div class="table-wrapper">
+        <table id="ordersTable">
+          <thead>
+            <tr>
+              <th>order_id</th>
+              <th>customer_name</th>
+              <th>customer_email</th>
+              <th>customer_phone</th>
+              <th>customer_address</th>
+              <th>product_name</th>
+              <th>quantity</th>
+              <th>payment_amount</th>
+              <th>payment_status</th>
+              <th>delivery_date</th>
+              <th>order_date</th>
+              <th>status</th>
+              <th>review_opt_in</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- Cart / Checkout Modal -->
+  <div class="modal" id="cartModal">
+    <div class="modal-content">
+      <button class="modal-close" onclick="closeCartModal()">×</button>
+      <h3>Your Order</h3>
+
+      <div id="cart-empty-message" style="display:none; margin-bottom:1rem; color:#666; font-size:0.95rem;">
+        Your cart is empty. Please add some items first.
+      </div>
+
+      <div id="cart-items-container" class="cart-items-list"></div>
+      <div id="cart-total" class="cart-summary-total"></div>
+      <div id="cart-shipping" class="cart-summary-total" style="font-size:0.9rem; color:#555;"></div>
+      <div id="cart-grand-total" class="cart-summary-total" style="margin-top:0.2rem;"></div>
+
+      <p style="font-size:0.85rem; color:#666; margin-top:0.5rem;">
+        Free delivery for orders above 500 kr. Orders below 500 kr have a 99 kr delivery fee.
+      </p>
+
+      <form id="orderForm" onsubmit="handleOrderSubmit(event)">
+        <div class="form-group">
+          <label for="customerName">Full Name *</label>
+          <input type="text" id="customerName" required>
+        </div>
+        <div class="form-group">
+          <label for="customerEmail">Email Address *</label>
+          <input type="email" id="customerEmail" required>
+        </div>
+        <div class="form-group">
+          <label for="customerPhone">Phone Number *</label>
+          <input type="tel" id="customerPhone" required>
+        </div>
+        <div class="form-group">
+          <label for="customerAddress">Delivery Address *</label>
+          <input type="text" id="customerAddress" required>
+        </div>
+        <div class="form-group">
+          <label for="deliveryDate">Delivery Date *</label>
+          <input type="date" id="deliveryDate" required>
+        </div>
+        <div class="form-group">
+          <div class="form-inline">
+            <input type="checkbox" id="reviewOptIn">
+            <label for="reviewOptIn">I'm happy to be contacted later for a short review.</label>
+          </div>
+        </div>
+
+        <!-- Swish payment info (filled after order is stored) -->
+        <div id="payment-info" class="payment-section" style="display:none;">
+          <div class="payment-qr">
+            <img src="images/swish-qr.png" alt="Swish QR code">
+          </div>
+          <div class="payment-text">
+            <strong>Step 1 – Pay with Swish</strong>
+            <p class="payment-amount">
+              Amount: <strong id="swish-amount">–</strong>
+            </p>
+            <p class="payment-orderid">
+              Order ID: <strong id="swish-order-id">–</strong>
+            </p>
+            <p class="payment-note">
+              Scan the QR code or tap the button below to open Swish.
+              The amount and your order ID will be filled in.  
+              Please write the order ID in the <em>message</em> field in Swish.
+            </p>
+            <a id="swish-link" class="payment-open-btn" href="#" target="_blank" rel="noopener">
+              Open Swish
+            </a>
+          </div>
+        </div>
+
+        <div id="successMessage" class="success-message" style="display: none;">
+          ✓ Order placed successfully! Please complete the Swish payment using the details above.
+        </div>
+
+        <button type="submit" class="submit-btn" id="submitBtn">Place Order</button>
+      </form>
+    </div>
+  </div>
+
+  <footer class="footer">
+    <p>© 2024 Mama Ranta Bakery. All rights reserved.</p>
+  </footer>
+
+  <!-- Main app logic -->
+  <script src="app.js"></script>
+</body>
+</html>
