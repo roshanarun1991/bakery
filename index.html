@@ -119,6 +119,30 @@
       text-align: center;
     }
 
+    /* Language buttons */
+    .lang-btn {
+      background: transparent;
+      border: 1px solid #8b4513;
+      color: #8b4513;
+      padding: 0.25rem 0.7rem;
+      border-radius: 999px;
+      font-size: 0.75rem;
+      cursor: pointer;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      transition: all 0.2s ease;
+    }
+
+    .lang-btn + .lang-btn {
+      margin-left: 0.25rem;
+    }
+
+    .lang-btn.active,
+    .lang-btn:hover {
+      background: #8b4513;
+      color: #fff;
+    }
+
     /* Hero Section */
     .hero {
       background: linear-gradient(135deg, #d4a574 0%, #8b4513 100%);
@@ -158,6 +182,14 @@
       font-weight: 400;
       font-family: 'Playfair Display', serif;
       letter-spacing: 1px;
+    }
+
+    .products-note {
+      text-align: center;
+      max-width: 600px;
+      margin: -1.5rem auto 3rem;
+      color: #666;
+      font-size: 0.95rem;
     }
 
     .products-grid {
@@ -883,56 +915,63 @@
         <p id="tagline">Authentic Swedish Baked Goods</p>
       </div>
       <nav class="nav-links">
-        <a onclick="scrollToSection('products')">Products</a>
-        <a onclick="scrollToSection('reviews')">Reviews</a>
-        <a onclick="scrollToSection('about')">About</a>
-        <a onclick="scrollToSection('contact')">Contact</a>
-        <a onclick="scrollToSection('hero')">Home</a>
+        <a id="nav-products" onclick="scrollToSection('products')">Products</a>
+        <a id="nav-reviews" onclick="scrollToSection('reviews')">Reviews</a>
+        <a id="nav-about" onclick="scrollToSection('about')">About</a>
+        <a id="nav-contact" onclick="scrollToSection('contact')">Contact</a>
+        <a id="nav-home" onclick="scrollToSection('hero')">Home</a>
+
+        <!-- Language toggle -->
+        <button class="lang-btn" type="button" onclick="setLanguage('sv')">SV</button>
+        <button class="lang-btn" type="button" onclick="setLanguage('en')">EN</button>
+
         <button class="cart-btn" type="button" onclick="openCartModal()">
-          🛒 Cart <span id="cart-count" class="cart-count">0</span>
+          🛒 <span id="cart-label">Cart</span> <span id="cart-count" class="cart-count">0</span>
         </button>
-        <button class="admin-btn" type="button" onclick="toggleAdminLogin()">Admin</button>
+        <button class="admin-btn" type="button" onclick="toggleAdminLogin()" id="admin-btn-label">Admin</button>
       </nav>
     </div>
   </header>
 
   <section class="hero" id="hero">
-    <h2>Välkommen till Mamma Ranta</h2>
-    <p>Experience the authentic taste of Sweden with our handcrafted pastries and breads.</p>
+    <h2 id="hero-title">Välkommen till Mamma Ranta</h2>
+    <p id="hero-subtitle">Experience the authentic taste of Sweden with our handcrafted pastries and breads.</p>
   </section>
 
   <section class="products" id="products">
-    <h2 class="section-title">Our Signature Products</h2>
-    <p>Orders must be placed no later than 11:00 a.m the day before desired delivery.</p>
+    <h2 class="section-title" id="products-title">Our Signature Products</h2>
+    <p class="products-note" id="orders-note">
+      Orders must be placed no later than 11:00 a.m the day before desired delivery.
+    </p>
     <div class="products-grid" id="products-grid"></div>
   </section>
 
   <!-- Reviews section -->
   <section class="reviews" id="reviews">
-    <h2 class="section-title">What Our Guests Say</h2>
+    <h2 class="section-title" id="reviews-title">What Our Guests Say</h2>
     <div class="reviews-strip" id="reviews-strip"></div>
   </section>
 
   <!-- About section -->
   <section class="contact" id="about">
-    <h2 class="section-title">About Us</h2>
+    <h2 class="section-title" id="about-title">About Us</h2>
     <div style="max-width:1200px; margin:0 auto; display:grid; grid-template-columns: repeat(auto-fit, minmax(320px,1fr)); gap:2.5rem;">
       <div>
         <img src="images/about-1.jpg" style="width:100%; border-radius:16px; box-shadow:0 4px 12px rgba(0,0,0,0.1);" alt="Baking at home">
-        <h3 style="margin-top:1rem; font-size:1.8rem; font-family:'Playfair Display'; color:#8b4513;">
+        <h3 style="margin-top:1rem; font-size:1.8rem; font-family:'Playfair Display'; color:#8b4513;" id="our-story-title">
           Our Story
         </h3>
-        <p style="line-height:1.6; color:#444;">
+        <p style="line-height:1.6; color:#444;" id="our-story-text">
           Mamma Ranta Bakery began as a small home-kitchen dream and has grown into a beloved neighbourhood name.
           Every pastry is baked fresh using Swedish techniques, premium ingredients, and a whole lot of love.
         </p>
       </div>
       <div>
         <img src="images/about-2.jpg" style="width:100%; border-radius:16px; box-shadow:0 4px 12px rgba(0,0,0,0.1);" alt="Home baker portrait">
-        <h3 style="margin-top:1rem; font-size:1.8rem; font-family:'Playfair Display'; color:#8b4513;">
+        <h3 style="margin-top:1rem; font-size:1.8rem; font-family:'Playfair Display'; color:#8b4513;" id="meet-baker-title">
           Meet the Baker
         </h3>
-        <p style="line-height:1.6; color:#444;">
+        <p style="line-height:1.6; color:#444;" id="meet-baker-text">
           As a home baker, every batch is small and every detail matters.
           From kanelbullar to prinsesstårta, each order is handcrafted to bring a little fika joy to your day.
         </p>
@@ -941,46 +980,46 @@
   </section>
 
   <section class="contact" id="contact">
-    <h2 class="section-title">Visit Us</h2>
+    <h2 class="section-title" id="visit-title">Visit Us</h2>
     <div class="contact-content">
       <div class="contact-info">
-        <h3>Get in Touch</h3>
+        <h3 id="get-in-touch-title">Get in Touch</h3>
         <div class="contact-item">
           <div class="contact-icon">📞</div>
           <div class="contact-text">
-            <h4>Phone</h4>
+            <h4 id="phone-label">Phone</h4>
             <p id="contact-phone">+46 8 123 4567</p>
           </div>
         </div>
         <div class="contact-item">
           <div class="contact-icon">✉️</div>
           <div class="contact-text">
-            <h4>Email</h4>
+            <h4 id="email-label">Email</h4>
             <p id="contact-email">hello@mamaranta.se</p>
           </div>
         </div>
         <div class="contact-item">
           <div class="contact-icon">📍</div>
           <div class="contact-text">
-            <h4>Address</h4>
+            <h4 id="address-label">Address</h4>
             <p id="contact-address">Storgatan 12, Stockholm</p>
           </div>
         </div>
       </div>
       <div class="contact-info">
-        <h3>Opening Hours</h3>
+        <h3 id="opening-hours-title">Opening Hours</h3>
         <div class="contact-item">
           <div class="contact-icon">🕐</div>
           <div class="contact-text">
-            <h4>Monday - Friday</h4>
-            <p>7:00 AM - 6:00 PM</p>
+            <h4 id="weekday-hours-label">Monday - Friday</h4>
+            <p id="weekday-hours-value">7:00 AM - 6:00 PM</p>
           </div>
         </div>
         <div class="contact-item">
           <div class="contact-icon">🕐</div>
           <div class="contact-text">
-            <h4>Saturday - Sunday</h4>
-            <p>8:00 AM - 5:00 PM</p>
+            <h4 id="weekend-hours-label">Saturday - Sunday</h4>
+            <p id="weekend-hours-value">8:00 AM - 5:00 PM</p>
           </div>
         </div>
       </div>
@@ -1066,7 +1105,7 @@
   <div class="modal" id="cartModal">
     <div class="modal-content">
       <button class="modal-close" onclick="closeCartModal()">×</button>
-      <h3>Your Order</h3>
+      <h3 id="your-order-title">Your Order</h3>
 
       <div id="cart-empty-message" style="display:none; margin-bottom:1rem; color:#666; font-size:0.95rem;">
         Your cart is empty. Please add some items first.
@@ -1077,35 +1116,35 @@
       <div id="cart-shipping" class="cart-summary-total" style="font-size:0.9rem; color:#555;"></div>
       <div id="cart-grand-total" class="cart-summary-total" style="margin-top:0.2rem;"></div>
 
-      <p style="font-size:0.85rem; color:#666; margin-top:0.5rem;">
+      <p style="font-size:0.85rem; color:#666; margin-top:0.5rem;" id="shipping-note">
         Free delivery for orders above 500 kr. Orders below 500 kr have a 99 kr delivery fee.
       </p>
 
       <form id="orderForm" onsubmit="handleOrderSubmit(event)">
         <div class="form-group">
-          <label for="customerName">Full Name *</label>
+          <label for="customerName" id="label-name">Full Name *</label>
           <input type="text" id="customerName" required>
         </div>
         <div class="form-group">
-          <label for="customerEmail">Email Address *</label>
+          <label for="customerEmail" id="label-email">Email Address *</label>
           <input type="email" id="customerEmail" required>
         </div>
         <div class="form-group">
-          <label for="customerPhone">Phone Number *</label>
+          <label for="customerPhone" id="label-phone">Phone Number *</label>
           <input type="tel" id="customerPhone" required>
         </div>
         <div class="form-group">
-          <label for="customerAddress">Delivery Address *</label>
+          <label for="customerAddress" id="label-address">Delivery Address *</label>
           <input type="text" id="customerAddress" required>
         </div>
         <div class="form-group">
-          <label for="deliveryDate">Delivery Date *</label>
+          <label for="deliveryDate" id="label-delivery-date">Delivery Date *</label>
           <input type="date" id="deliveryDate" required>
         </div>
         <div class="form-group">
           <div class="form-inline">
             <input type="checkbox" id="reviewOptIn">
-            <label for="reviewOptIn">I'm happy to be contacted later for a short review.</label>
+            <label for="reviewOptIn" id="label-review-optin">I'm happy to be contacted later for a short review.</label>
           </div>
         </div>
 
@@ -1115,43 +1154,200 @@
             <img src="images/swish-qr.png" alt="Swish QR code">
           </div>
           <div class="payment-text">
-            <strong>Step 1 – Pay with Swish</strong>
+            <strong id="payment-step-title">Step 1 – Pay with Swish</strong>
             <p class="payment-amount">
               Amount: <strong id="swish-amount">–</strong>
             </p>
             <p class="payment-orderid">
               Order ID: <strong id="swish-order-id">–</strong>
             </p>
-            <p class="payment-note">
+            <p class="payment-note" id="payment-note">
               Scan the QR code or tap the button below to open Swish.
               The amount and your order ID will be filled in.  
               Please write the order ID in the <em>message</em> field in Swish.
             </p>
             <a id="swish-link" class="payment-open-btn" href="#" target="_blank" rel="noopener">
-              Open Swish
+              <span id="swish-button-text">Open Swish</span>
             </a>
           </div>
         </div>
 
         <div id="successMessage" class="success-message" style="display: none;">
-          ✓ Order placed successfully! Please complete the Swish payment using the details above.
+          <span id="success-message-text">✓ Order placed successfully! Please complete the Swish payment using the details above.</span>
         </div>
 
-        <button type="submit" class="submit-btn" id="submitBtn">Place Order</button>
+        <button type="submit" class="submit-btn" id="submitBtn">
+          <span id="place-order-text">Place Order</span>
+        </button>
       </form>
     </div>
   </div>
 
   <footer class="footer">
-    <p>© 2025 Mamma Ranta Bakery. All rights reserved.</p>
+    <p id="footer-text">© 2025 Mamma Ranta Bakery. All rights reserved.</p>
   </footer>
 
   <!-- Main app logic -->
   <script src="app.js"></script>
+
+  <!-- Language switching -->
+  <script>
+    const translations = {
+      en: {
+        // header / nav
+        'bakery-name': 'Mamma Ranta Bakery',
+        'tagline': 'Authentic Swedish Baked Goods',
+        'nav-products': 'Products',
+        'nav-reviews': 'Reviews',
+        'nav-about': 'About',
+        'nav-contact': 'Contact',
+        'nav-home': 'Home',
+        'cart-label': 'Cart',
+        'admin-btn-label': 'Admin',
+
+        // hero
+        'hero-title': 'Welcome to Mamma Ranta',
+        'hero-subtitle': 'Experience the authentic taste of Sweden with our handcrafted pastries and breads.',
+
+        // products
+        'products-title': 'Our Signature Products',
+        'orders-note': 'Orders must be placed no later than 11:00 a.m the day before desired delivery.',
+
+        // reviews
+        'reviews-title': 'What Our Guests Say',
+
+        // about
+        'about-title': 'About Us',
+        'our-story-title': 'Our Story',
+        'our-story-text': 'Mamma Ranta Bakery began as a small home-kitchen dream and has grown into a beloved neighbourhood name. Every pastry is baked fresh using Swedish techniques, premium ingredients, and a whole lot of love.',
+        'meet-baker-title': 'Meet the Baker',
+        'meet-baker-text': 'As a home baker, every batch is small and every detail matters. From kanelbullar to prinsesstårta, each order is handcrafted to bring a little fika joy to your day.',
+
+        // contact
+        'visit-title': 'Visit Us',
+        'get-in-touch-title': 'Get in Touch',
+        'phone-label': 'Phone',
+        'email-label': 'Email',
+        'address-label': 'Address',
+        'opening-hours-title': 'Opening Hours',
+        'weekday-hours-label': 'Monday - Friday',
+        'weekday-hours-value': '7:00 AM - 6:00 PM',
+        'weekend-hours-label': 'Saturday - Sunday',
+        'weekend-hours-value': '8:00 AM - 5:00 PM',
+
+        // cart / checkout
+        'your-order-title': 'Your Order',
+        'cart-empty-message': 'Your cart is empty. Please add some items first.',
+        'shipping-note': 'Free delivery for orders above 500 kr. Orders below 500 kr have a 99 kr delivery fee.',
+        'label-name': 'Full Name *',
+        'label-email': 'Email Address *',
+        'label-phone': 'Phone Number *',
+        'label-address': 'Delivery Address *',
+        'label-delivery-date': 'Delivery Date *',
+        'label-review-optin': "I'm happy to be contacted later for a short review.",
+        'payment-step-title': 'Step 1 – Pay with Swish',
+        'payment-note': 'Scan the QR code or tap the button below to open Swish. The amount and your order ID will be filled in. Please write the order ID in the message field in Swish.',
+        'swish-button-text': 'Open Swish',
+        'success-message-text': '✓ Order placed successfully! Please complete the Swish payment using the details above.',
+        'place-order-text': 'Place Order',
+
+        // footer
+        'footer-text': '© 2025 Mamma Ranta Bakery. All rights reserved.'
+      },
+
+      sv: {
+        // header / nav
+        'bakery-name': 'Mamma Ranta Bageri',
+        'tagline': 'Äkta svenska bakverk',
+        'nav-products': 'Produkter',
+        'nav-reviews': 'Omdömen',
+        'nav-about': 'Om oss',
+        'nav-contact': 'Kontakt',
+        'nav-home': 'Hem',
+        'cart-label': 'Kundvagn',
+        'admin-btn-label': 'Admin',
+
+        // hero
+        'hero-title': 'Välkommen till Mamma Ranta',
+        'hero-subtitle': 'Upplev den äkta smaken av Sverige med våra hantverksbakade bröd och bakverk.',
+
+        // products
+        'products-title': 'Våra Signaturprodukter',
+        'orders-note': 'Beställningar måste göras senast kl. 11:00 dagen före önskad leverans.',
+
+        // reviews
+        'reviews-title': 'Vad våra gäster säger',
+
+        // about
+        'about-title': 'Om oss',
+        'our-story-title': 'Vår historia',
+        'our-story-text': 'Mamma Ranta Bageri började som en liten hemmadröm och har vuxit till ett älskat namn i kvarteret. Varje bakverk bakas färskt med svenska metoder, noga utvalda råvaror och massor av kärlek.',
+        'meet-baker-title': 'Möt bagaren',
+        'meet-baker-text': 'Som hemmabagare är varje sats liten och varje detalj viktig. Från kanelbullar till prinsesstårta – varje beställning görs för hand för att ge lite fikaglädje till din dag.',
+
+        // contact
+        'visit-title': 'Besök oss',
+        'get-in-touch-title': 'Kontakta oss',
+        'phone-label': 'Telefon',
+        'email-label': 'E-post',
+        'address-label': 'Adress',
+        'opening-hours-title': 'Öppettider',
+        'weekday-hours-label': 'Måndag – Fredag',
+        'weekday-hours-value': '07:00 – 18:00',
+        'weekend-hours-label': 'Lördag – Söndag',
+        'weekend-hours-value': '08:00 – 17:00',
+
+        // cart / checkout
+        'your-order-title': 'Din beställning',
+        'cart-empty-message': 'Din kundvagn är tom. Lägg till några produkter först.',
+        'shipping-note': 'Fri leverans vid order över 500 kr. För order under 500 kr tillkommer 99 kr i leveransavgift.',
+        'label-name': 'Fullständigt namn *',
+        'label-email': 'E-postadress *',
+        'label-phone': 'Telefonnummer *',
+        'label-address': 'Leveransadress *',
+        'label-delivery-date': 'Leveransdatum *',
+        'label-review-optin': 'Jag blir gärna kontaktad senare för en kort recension.',
+        'payment-step-title': 'Steg 1 – Betala med Swish',
+        'payment-note': 'Skanna QR-koden eller tryck på knappen för att öppna Swish. Belopp och ordernummer fylls i. Skriv ordernumret i meddelandefältet i Swish.',
+        'swish-button-text': 'Öppna Swish',
+        'success-message-text': '✓ Beställningen är lagd! Slutför din Swish-betalning med uppgifterna ovan.',
+        'place-order-text': 'Lägg beställning',
+
+        // footer
+        'footer-text': '© 2025 Mamma Ranta Bageri. Alla rättigheter förbehållna.'
+      }
+    };
+
+    function applyTranslations(lang) {
+      const dict = translations[lang];
+      if (!dict) return;
+
+      Object.keys(dict).forEach(id => {
+        const el = document.getElementById(id);
+        if (el) {
+          el.textContent = dict[id];
+        }
+      });
+
+      // Update active button styling
+      document.querySelectorAll('.lang-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.textContent.toLowerCase() === lang);
+      });
+
+      // Set <html lang="...">
+      document.documentElement.lang = lang;
+    }
+
+    function setLanguage(lang) {
+      localStorage.setItem('mammaranta_lang', lang);
+      applyTranslations(lang);
+    }
+
+    // On first load, use saved language or default to Swedish
+    document.addEventListener('DOMContentLoaded', () => {
+      const saved = localStorage.getItem('mammaranta_lang') || 'sv';
+      applyTranslations(saved);
+    });
+  </script>
 </body>
 </html>
-
-
-
-
-
